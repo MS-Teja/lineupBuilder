@@ -1,16 +1,45 @@
-# React + Vite
+# Lineup Builder
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A sleek, broadcast-quality football lineup builder designed for YouTubers, content creators, and tactical analysts. Create custom or preset formations, intuitively drag and drop players, and export high-resolution screenshots ready for your video scripts.
 
-Currently, two official plugins are available:
+## 🚀 Live Demo
+**[Launch Lineup Builder](https://MS-Teja.github.io/lineupBuilder/)**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## ✨ Key Features
+- **Progressive Player Reveal:** Hide players upfront and smoothly reveal them sequentially to match your video script or narrative.
+- **Intuitive Drag & Drop:** Fluidly swap player positions or drag them freely around the pitch with zero visual distortion.
+- **Flexible Pitch Controls:** Switch between vertical and horizontal orientations and fine-tune your pitch's aspect ratio.
+- **One-Click Export:** Download a high-quality, transparent PNG of your tactical setup.
+- **Broadcast-Ready Aesthetics:** High-contrast dark theme (`#0f172a`) with striking emerald accents (`#10b981`), optimized specifically for video downscaling and compression.
 
-## React Compiler
+## 🛠️ Local Development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Requirements
+- Node.js
 
-## Expanding the ESLint configuration
+### Setup
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/MS-Teja/lineupBuilder.git
+   ```
+
+2. Install dependencies:
+   ```bash
+   cd lineupBuilder
+   npm install
+   ```
+
+3. Start the Vite development server:
+   ```bash
+   npm run dev
+   ```
+
+### Deployment
+This project is configured to easily deploy to GitHub Pages. Just run:
+```bash
+npm run deploy
+```
+
+---
+*Built with React, Vite, and Lucide Icons.*
