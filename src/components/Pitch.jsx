@@ -40,7 +40,7 @@ const Pitch = ({ pitchRef, players, onPlayerClick, onPlayerPositionChange, orien
           const rawCoords = masterPositions[player.positionId] || { top: 50, left: 50, role: '' };
           
           const coordinates = isHorizontal 
-            ? { top: rawCoords.left, left: rawCoords.top, role: rawCoords.role }
+            ? { top: 100 - rawCoords.left, left: rawCoords.top, role: rawCoords.role }
             : rawCoords;
 
           return (
@@ -64,7 +64,7 @@ const Pitch = ({ pitchRef, players, onPlayerClick, onPlayerPositionChange, orien
         {/* Drop Zones (Only visible when dragging) */}
         {isDragging && Object.entries(masterPositions).map(([posId, rawCoords]) => {
           const coordinates = isHorizontal 
-            ? { top: rawCoords.left, left: rawCoords.top }
+            ? { top: 100 - rawCoords.left, left: rawCoords.top }
             : rawCoords;
             
           return (
