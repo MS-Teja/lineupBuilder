@@ -330,56 +330,16 @@ const drawPlayer = (context, slot, coordinate, field, portraits, orientation) =>
 
     if (orientation === 'landscape') {
       const name = labelFor(profile.name);
-      const hasBadge = Boolean(portrait && profile.number != null);
-      let textX = 0;
-      let badgeX = 0;
-      let badgeWidth = 0;
-      
-      const gap = marker * 0.12;
-      const nameFont = `700 ${Math.round(marker * 0.22)}px Outfit, sans-serif`;
-      const badgeFont = `800 ${Math.round(marker * 0.18)}px Outfit, sans-serif`;
-      
-      if (hasBadge) {
-        context.font = badgeFont;
-        const numText = String(profile.number);
-        const numMetrics = context.measureText(numText);
-        badgeWidth = numMetrics.width + marker * 0.16;
-        
-        context.font = nameFont;
-        const nameMetrics = context.measureText(name);
-        
-        const totalWidth = badgeWidth + gap + nameMetrics.width;
-        badgeX = -(totalWidth / 2) + badgeWidth / 2;
-        textX = badgeX + (badgeWidth / 2) + gap + (nameMetrics.width / 2);
-      }
-      
       const detailsY = radius + marker * 0.18;
-      
-      if (hasBadge) {
-        context.fillStyle = '#e7eddb';
-        context.beginPath();
-        const badgeHeight = marker * 0.26;
-        const badgeR = marker * 0.05;
-        const bx = badgeX - badgeWidth / 2;
-        const by = detailsY - marker * 0.02;
-        context.roundRect(bx, by, badgeWidth, badgeHeight, badgeR);
-        context.fill();
-        
-        context.fillStyle = '#152016';
-        context.font = badgeFont;
-        context.textAlign = 'center';
-        context.textBaseline = 'top';
-        context.fillText(String(profile.number), badgeX, by + marker * 0.04);
-      }
       
       context.shadowColor = 'rgba(2, 10, 5, 0.82)';
       context.shadowBlur = marker * 0.1;
       context.shadowOffsetY = 2;
       context.fillStyle = 'rgba(244, 248, 239, 0.9)';
-      context.font = nameFont;
+      context.font = `700 ${Math.round(marker * 0.22)}px Outfit, sans-serif`;
       context.textAlign = 'center';
       context.textBaseline = 'top';
-      context.fillText(name, textX, detailsY);
+      context.fillText(name, 0, detailsY);
     }
   }
   

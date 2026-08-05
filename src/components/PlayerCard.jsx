@@ -70,9 +70,6 @@ export default function PlayerCard({
           )}
         </span>
         <span className="player-details">
-          {!isConcealed && slot.profile.photo && slot.profile.number != null && (
-            <span className="player-details-number">{slot.profile.number}</span>
-          )}
           <span className="player-label">{labelFor(slot.profile.name)}</span>
         </span>
       </button>
