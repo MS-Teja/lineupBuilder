@@ -1,21 +1,24 @@
 import { demoDirectory } from '../utils/formations';
 
-const PUBLIC_SPORTS_DB_KEY = '123';
-const PUBLIC_SPORTS_DB_ROOT = `https://www.thesportsdb.com/api/v1/json/${PUBLIC_SPORTS_DB_KEY}`;
+const SOFASCORE_API_ROOT = 'https://api.sofascore.com/api/v1';
+const SOFASCORE_IMAGE_ROOT = 'https://api.sofascore.app/api/v1';
 
 const normalizeText = (value = '') => value.toLocaleLowerCase();
 
-const normalizeSportDbPlayer = (player) => ({
-  id: `thesportsdb-${player.idPlayer}`,
-  provider: 'thesportsdb',
-  providerId: player.idPlayer,
-  name: player.strPlayer ?? 'Unnamed player',
-  photo: player.strThumb || player.strCutout || null,
-  club: player.strTeam || 'Club unavailable',
-  country: player.strNationality || 'Country unavailable',
-  position: player.strPosition || 'Player',
-  number: player.strNumber ? Number(player.strNumber) : null,
-});
+const normalizeSofaScorePlayer = (player) => {
+  const entity = player.entity;
+  return {
+    id: `sofascore-${entity.id}`,
+    provider: 'sofascore',
+    providerId: entity.id,
+    name: entity.name ?? 'Unnamed player',
+    photo: `${SOFASCORE_IMAGE_ROOT}/player/${entity.id}/image`,
+    club: entity.team?.name || 'Club unavailable',
+    country: entity.country?.name || 'Country unavailable',
+    position: entity.position || 'Player',
+    number: entity.jerseyNumber ? Number(entity.jerseyNumber) : null,
+  };
+};
 
 const searchLocalDirectory = (query) => {
   const term = normalizeText(query.trim());
@@ -70,9 +73,13 @@ export async function searchPlayerDirectory(query, { signal } = {}) {
       };
     }
 
-    const url = `${PUBLIC_SPORTS_DB_ROOT}/searchplayers.php?p=${encodeURIComponent(cleanQuery)}`;
+    const url = `${SOFASCORE_API_ROOT}/search/all?q=${encodeURIComponent(cleanQuery)}`;
     const payload = await requestJson(url, signal);
-    const remotePlayers = (payload.player ?? []).map(normalizeSportDbPlayer);
+    const results = payload.results || [];
+    
+    const remotePlayers = results
+      .filter((r) => r.type === 'player' && r.entity)
+      .map(normalizeSofaScorePlayer);
 
     return {
       players: [...remotePlayers, ...localMatches]

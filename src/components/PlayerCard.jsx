@@ -37,7 +37,7 @@ export default function PlayerCard({
         <button
           type="button"
           className={`slot-marker ${selected ? 'is-selected' : ''}`}
-          onClick={() => onSelect(slot.id)}
+          onClick={(e) => { e.stopPropagation(); onSelect(slot.id); }}
           aria-label={`Add a player to ${role.label}`}
         >
           <span className="slot-add"><Plus size={18} strokeWidth={2.25} /></span>
@@ -54,7 +54,7 @@ export default function PlayerCard({
       <button
         type="button"
         className={`player-token ${isConcealed ? 'is-concealed' : ''}`}
-        onClick={() => onSelect(slot.id)}
+        onClick={(e) => { e.stopPropagation(); onSelect(slot.id); }}
         onDragStart={(event) => onDragStart(event, slot.id)}
         onDragEnd={onDragEnd}
         draggable={!slot.isRemoving}
@@ -62,10 +62,19 @@ export default function PlayerCard({
         aria-label={`${slot.profile.name}, ${role.label}`}
       >
         <span className={`player-circle ${slot.profile.photo && !isConcealed ? 'has-photo' : 'is-number-only'}`}>
-          {!isConcealed && <Portrait key={slot.profile.id ?? `${slot.profile.name}-${slot.profile.photo ?? ''}`} player={slot.profile} />}
-          {!isConcealed && <span className="player-number">{slot.profile.number ?? '—'}</span>}
+          {!isConcealed && slot.profile.photo && (
+            <Portrait key={slot.profile.id ?? `${slot.profile.name}-${slot.profile.photo ?? ''}`} player={slot.profile} />
+          )}
+          {(!isConcealed && !slot.profile.photo) && (
+            <span className="player-number">{slot.profile.number ?? '—'}</span>
+          )}
         </span>
-        <span className="player-label">{labelFor(slot.profile.name)}</span>
+        <span className="player-details">
+          {!isConcealed && slot.profile.photo && slot.profile.number != null && (
+            <span className="player-details-number">{slot.profile.number}</span>
+          )}
+          <span className="player-label">{labelFor(slot.profile.name)}</span>
+        </span>
       </button>
     </div>
   );

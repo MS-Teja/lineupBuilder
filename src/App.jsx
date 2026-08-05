@@ -10,6 +10,7 @@ import {
   emptySlot,
   getFormation,
   initialSlots,
+  parseFormationString,
 } from './utils/formations';
 import './App.css';
 
@@ -29,13 +30,19 @@ const waitForPaint = () => new Promise((resolve) => {
 
 const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 
-const makeScene = (slots, formationId, isCustomShape) => ({
+const makeScene = (slots, formationId, isCustomShape, customFormationInput) => ({
   formationId,
   isCustomShape,
+  customFormationInput: customFormationInput || null,
   slots: slots.map((slot) => ({
     id: slot.id,
     positionId: slot.positionId,
+    profile: slot.profile ? { ...slot.profile } : null,
+    accent: slot.accent,
     isRevealed: slot.isRevealed,
+    isRemoving: slot.isRemoving,
+    customX: slot.customX ?? null,
+    customY: slot.customY ?? null,
   })),
 });
 
@@ -48,8 +55,12 @@ const materializeExportScene = (baseSlots, scene, orientation) => {
       return {
         ...slot,
         positionId: state?.positionId ?? slot.positionId,
+        profile: state ? (state.profile ? { ...state.profile } : null) : slot.profile,
+        accent: state?.accent ?? slot.accent,
         isRevealed: state?.isRevealed ?? slot.isRevealed,
         isRemoving: false,
+        customX: state?.customX ?? slot.customX ?? null,
+        customY: state?.customY ?? slot.customY ?? null,
       };
     }),
   };
@@ -59,6 +70,7 @@ const hiddenOpeningScene = makeScene(
   initialSlots.map((slot) => ({ ...slot, isRevealed: false })),
   '4-3-3',
   false,
+  null,
 );
 
 const defaultKeyframes = () => [
@@ -81,6 +93,7 @@ const fileStem = (formation, orientation) => `tactical-lineup-${formation.label.
 function App() {
   const [formationId, setFormationId] = useState('4-3-3');
   const [isCustomShape, setIsCustomShape] = useState(false);
+  const [customFormationInput, setCustomFormationInput] = useState('');
   const [slots, setSlots] = useState(initialSlots);
   const [selectedSlotId, setSelectedSlotId] = useState('slot-10');
   const [orientation, setOrientation] = useState('landscape');
@@ -131,16 +144,22 @@ function App() {
     const bySlotId = new Map(scene.slots.map((slot) => [slot.id, slot]));
     setFormationId(scene.formationId);
     setIsCustomShape(scene.isCustomShape);
+    setCustomFormationInput(scene.customFormationInput || '');
     setSlots((current) => current.map((slot) => {
       const next = bySlotId.get(slot.id);
       if (!next) return slot;
-      const isEntering = Boolean(slot.profile) && !slot.isRevealed && next.isRevealed;
+      const hasProfile = Boolean(next.profile);
+      const isEntering = hasProfile && !slot.isRevealed && next.isRevealed;
       return {
         ...slot,
         positionId: next.positionId,
+        profile: next.profile ? { ...next.profile } : null,
+        accent: next.accent ?? slot.accent,
         isRevealed: next.isRevealed,
         isRemoving: false,
         motionKey: isEntering ? slot.motionKey + 1 : slot.motionKey,
+        customX: next.customX ?? null,
+        customY: next.customY ?? null,
       };
     }));
   };
@@ -153,11 +172,41 @@ function App() {
 
     setFormationId(nextFormationId);
     setIsCustomShape(false);
+    setCustomFormationInput('');
     setSlots((current) => current.map((slot, index) => ({
       ...slot,
       positionId: nextFormation.roles[index] ?? slot.positionId,
+      customX: null,
+      customY: null,
     })));
     announce(`${previousLabel} morphed into ${nextFormation.label}.`);
+  };
+
+  const applyCustomFormation = (inputString) => {
+    const parsed = parseFormationString(inputString);
+    if (!parsed) return;
+
+    const previousLabel = formation.label;
+    setFormationId(formationId); // keep the base id for fallback
+    setIsCustomShape(true);
+    setCustomFormationInput(inputString);
+    setSlots((current) => current.map((slot, index) => ({
+      ...slot,
+      positionId: parsed.roles[index] ?? slot.positionId,
+      customX: null,
+      customY: null,
+    })));
+    announce(`${previousLabel} morphed into ${parsed.label}.`);
+  };
+
+  const overrideSlotRole = (slotId, newPositionId) => {
+    setSlots((current) => current.map((slot) => (
+      slot.id === slotId
+        ? { ...slot, positionId: newPositionId, customX: null, customY: null }
+        : slot
+    )));
+    setIsCustomShape(true);
+    announce(`Role changed to ${newPositionId}.`);
   };
 
   const moveSlot = (sourceSlotId, destinationSlotId) => {
@@ -168,14 +217,16 @@ function App() {
       if (!source || !destination) return current;
 
       return current.map((slot) => {
-        if (slot.id === sourceSlotId) return { ...slot, positionId: destination.positionId };
-        if (slot.id === destinationSlotId) return { ...slot, positionId: source.positionId };
+        if (slot.id === sourceSlotId) return { ...slot, positionId: destination.positionId, customX: destination.customX, customY: destination.customY };
+        if (slot.id === destinationSlotId) return { ...slot, positionId: source.positionId, customX: source.customX, customY: source.customY };
         return slot;
       });
     });
     setIsCustomShape(true);
     announce('Roles swapped. This is now a custom shape.');
   };
+
+
 
   const selectSlot = (slotId) => {
     const slot = slots.find((item) => item.id === slotId);
@@ -286,7 +337,7 @@ function App() {
       id,
       label: `Cue ${String(keyframes.length + 1).padStart(2, '0')}`,
       duration: 850,
-      scene: makeScene(slots, formationId, isCustomShape),
+      scene: makeScene(slots, formationId, isCustomShape, customFormationInput),
     };
 
     setKeyframes((current) => [...current, keyframe]);
@@ -458,22 +509,29 @@ function App() {
         <div className="stage-column">
           <Pitch
             slots={slots}
-            selectedSlotId={selectedSlot.id}
+            selectedSlotId={activePanel === 'player' ? selectedSlotId : null}
             formation={formation}
             orientation={orientation}
             motion={activeMotion}
             onSelectSlot={selectSlot}
             onMoveSlot={moveSlot}
+            onFreeDrag={overrideSlotRole}
+            onDeselect={() => setActivePanel(null)}
           />
         </div>
 
         {activePanel === 'formation' && (
           <aside className="canvas-drawer formation-drawer" aria-label="Board controls">
             <FormationPanel
-              formationId={isCustomShape ? null : formationId}
+              formationId={formationId}
               orientation={orientation}
               isFull={isFull}
+              isCustomShape={isCustomShape}
+              customFormationInput={customFormationInput}
+              slots={slots}
               onFormationChange={changeFormation}
+              onCustomFormation={applyCustomFormation}
+              onRoleOverride={overrideSlotRole}
               onOrientationChange={setOrientation}
               onAddPlayer={openPlayerSearch}
               onClose={() => setActivePanel(null)}

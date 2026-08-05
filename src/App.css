@@ -326,6 +326,294 @@
   opacity: 0.58;
 }
 
+/* Custom formation card */
+
+.formation-option-custom .formation-expand-icon {
+  color: var(--faint);
+  transition: color 180ms var(--ease-out);
+}
+
+.formation-option-custom:hover .formation-expand-icon {
+  color: var(--chalk);
+}
+
+.formation-option-custom.is-active .formation-expand-icon {
+  color: var(--acid);
+}
+
+/* Custom formation editor */
+
+.custom-formation-editor {
+  padding: 0.55rem 0.5rem 0.25rem;
+  margin-top: 0.15rem;
+  background: rgba(214, 234, 131, 0.03);
+  border-top: 1px solid rgba(214, 234, 131, 0.08);
+  animation: editor-in 220ms var(--ease-out) both;
+}
+
+@keyframes editor-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.custom-input-row {
+  margin-bottom: 0.6rem;
+}
+
+.custom-text-input {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.48rem 0.55rem;
+  background: rgba(230, 238, 220, 0.04);
+  border: 1px solid var(--line);
+  transition: border-color 180ms var(--ease-out);
+}
+
+.custom-text-input:focus-within {
+  border-color: var(--acid);
+}
+
+.custom-text-input input {
+  flex: 1;
+  min-width: 0;
+  color: var(--chalk);
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.custom-text-input input::placeholder {
+  color: var(--faint);
+  font-weight: 600;
+}
+
+.custom-input-status {
+  flex-shrink: 0;
+  padding: 0.15rem 0.38rem;
+  color: var(--faint);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  background: rgba(230, 238, 220, 0.06);
+  border-radius: 2px;
+  transition: color 180ms var(--ease-out), background-color 180ms var(--ease-out);
+}
+
+.custom-input-status.is-valid {
+  color: var(--acid);
+  background: rgba(214, 234, 131, 0.12);
+}
+
+.custom-input-status.is-invalid {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.12);
+}
+
+/* Line steppers */
+
+.custom-steppers {
+  display: grid;
+  gap: 0.2rem;
+  margin-bottom: 0.55rem;
+}
+
+.line-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.32rem 0.35rem;
+  background: rgba(230, 238, 220, 0.025);
+  border: 1px solid rgba(230, 238, 220, 0.04);
+  transition: border-color 180ms var(--ease-out);
+}
+
+.line-stepper:hover {
+  border-color: var(--line);
+}
+
+.stepper-label {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stepper-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.12rem;
+}
+
+.stepper-btn {
+  display: grid;
+  place-items: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  color: var(--muted);
+  background: rgba(230, 238, 220, 0.04);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: color 180ms var(--ease-out), background-color 180ms var(--ease-out), border-color 180ms var(--ease-out);
+}
+
+.stepper-btn:hover:not(:disabled) {
+  color: var(--chalk);
+  background: rgba(214, 234, 131, 0.08);
+  border-color: var(--acid);
+}
+
+.stepper-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.stepper-value {
+  display: grid;
+  place-items: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  color: var(--chalk);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.stepper-line-actions {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.15rem;
+}
+
+.stepper-action {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.5rem;
+  color: var(--muted);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: transparent;
+  border: 1px dashed var(--line);
+  cursor: pointer;
+  transition: color 180ms var(--ease-out), border-color 180ms var(--ease-out);
+}
+
+.stepper-action:hover:not(:disabled) {
+  color: var(--chalk);
+  border-color: var(--chalk);
+}
+
+.stepper-action:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Apply button */
+
+.custom-apply-btn {
+  width: 100%;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.8rem;
+  margin-top: 0.15rem;
+  margin-bottom: 0.25rem;
+  color: var(--acid-ink);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: var(--acid);
+  cursor: pointer;
+  transition: transform 150ms var(--ease-out), background-color 180ms var(--ease-out), opacity 180ms var(--ease-out);
+}
+
+.custom-apply-btn:hover:not(:disabled) {
+  background: #e5f79b;
+  transform: translateY(-1px);
+}
+
+.custom-apply-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Role overrides section */
+
+.section-kicker-toggle {
+  width: 100%;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  justify-content: flex-start;
+  padding: 0;
+  transition: color 180ms var(--ease-out);
+}
+
+.section-kicker-toggle:hover {
+  color: var(--chalk);
+}
+
+.section-kicker-toggle svg:last-child {
+  margin-left: auto;
+  color: var(--faint);
+}
+
+.role-override-list {
+  display: grid;
+  gap: 0.2rem;
+  margin-top: 0.45rem;
+  animation: editor-in 200ms var(--ease-out) both;
+}
+
+.role-override-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.28rem 0.35rem;
+  background: rgba(230, 238, 220, 0.025);
+  border: 1px solid rgba(230, 238, 220, 0.04);
+}
+
+.role-override-player {
+  flex-shrink: 0;
+  min-width: 4.5rem;
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role-override-select {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0.35rem;
+  color: var(--chalk);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: rgba(230, 238, 220, 0.04);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: border-color 180ms var(--ease-out);
+}
+
+.role-override-select:focus {
+  border-color: var(--acid);
+  outline: none;
+}
+
+.role-override-select option {
+  background: #1e293b;
+  color: var(--chalk);
+}
+
 .rail-helper {
   margin: -0.1rem 0.5rem 0.85rem;
   color: var(--faint);
@@ -995,6 +1283,7 @@
   box-shadow: 0 0 0 0.3rem rgba(214, 234, 131, 0.08);
   transform: translate(calc(var(--x) - 50%), calc(var(--y) - 50%));
   animation: target-in 200ms var(--ease-out) both;
+  pointer-events: none;
 }
 
 .drop-target span {
@@ -2444,10 +2733,28 @@
   border-radius: 50%;
 }
 
+.player-details {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-top: 0.38rem;
+  max-width: 6.5rem;
+}
+
+.player-details-number {
+  color: #152016;
+  font-size: 0.52rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  background: #e7eddb;
+  padding: 0.08rem 0.22rem;
+  border-radius: 0.2rem;
+  line-height: 1;
+}
+
 .player-label {
   overflow: hidden;
-  max-width: 5.5rem;
-  margin-top: 0.32rem;
   color: rgba(244, 248, 239, 0.9);
   font-size: 0.61rem;
   font-weight: 700;
@@ -2515,7 +2822,7 @@
 
 .pitch-artboard.is-portrait .player-token { display: flex; width: 3.1rem; min-height: 0; padding: 0; }
 .pitch-artboard.is-portrait .player-circle { width: 2.35rem; height: 2.35rem; font-size: 0.5rem; }
-.pitch-artboard.is-portrait .player-label { display: none; }
+.pitch-artboard.is-portrait .player-details { display: none; }
 .pitch-artboard.is-portrait .player-pin.is-selected .player-token { transform: translate(-50%, -50%) scale(1.13); }
 
 .slot-marker {
@@ -2754,9 +3061,17 @@
   height: clamp(2.75rem, 5.45cqw, 4.2rem);
 }
 
+.pitch-artboard.is-landscape .player-details {
+  max-width: 8rem;
+  margin-top: 0.45rem;
+}
+
+.pitch-artboard.is-landscape .player-details-number {
+  font-size: clamp(0.5rem, 1.1cqw, 0.65rem);
+  padding: 0.1rem 0.28rem;
+}
+
 .pitch-artboard.is-landscape .player-label {
-  max-width: 7rem;
-  margin-top: 0.38rem;
   font-size: clamp(0.57rem, 1.25cqw, 0.75rem);
 }
 
@@ -2765,7 +3080,7 @@
   height: clamp(2.45rem, 15cqw, 3.2rem);
 }
 
-.pitch-artboard.is-portrait .player-label { display: none; }
+.pitch-artboard.is-portrait .player-details { display: none; }
 
 .pitch-artboard.is-landscape .slot-marker {
   width: clamp(2.75rem, 5.35cqw, 4.05rem);

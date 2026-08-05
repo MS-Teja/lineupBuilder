@@ -163,3 +163,106 @@ export const demoDirectory = initialSlots.map((slot) => ({
 }));
 
 export const roleInitials = (positionId) => positionId.replace(/[^A-Z]/g, '').slice(0, 3);
+
+// ─── Custom formation helpers ─────────────────────────────────────────────────
+
+export const allRoleOptions = Object.entries(roleMap).map(([id, data]) => ({
+  id,
+  label: data.label,
+  unit: data.unit,
+}));
+
+/**
+ * Given a line index, total number of lines, and the count of players on that
+ * line, return a list of role IDs from the roleMap. The mapping follows common
+ * tactical conventions — a back line of 4 yields LB/LCB/RCB/RB, while a
+ * midfield triple maps to LCM/CDM/RCM, and so on.
+ */
+const backLineRoles = {
+  2: ['LCB', 'RCB'],
+  3: ['LCB', 'CB', 'RCB'],
+  4: ['LB', 'LCB', 'RCB', 'RB'],
+  5: ['LWB', 'LCB', 'CB', 'RCB', 'RWB'],
+};
+
+const midLowRoles = {
+  1: ['CDM'],
+  2: ['LDM', 'RDM'],
+  3: ['LCM', 'CDM', 'RCM'],
+  4: ['LM', 'LCM', 'RCM', 'RM'],
+  5: ['LM', 'LCM', 'CDM', 'RCM', 'RM'],
+};
+
+const midHighRoles = {
+  1: ['CAM'],
+  2: ['LAM', 'RAM'],
+  3: ['LAM', 'CAM', 'RAM'],
+  4: ['LW', 'LAM', 'RAM', 'RW'],
+  5: ['LW', 'LAM', 'CAM', 'RAM', 'RW'],
+};
+
+const midGenericRoles = {
+  1: ['CM'],
+  2: ['LCM', 'RCM'],
+  3: ['LCM', 'CM', 'RCM'],
+  4: ['LM', 'LCM', 'RCM', 'RM'],
+  5: ['LM', 'LCM', 'CM', 'RCM', 'RM'],
+};
+
+const frontLineRoles = {
+  1: ['ST'],
+  2: ['LS', 'RS'],
+  3: ['LW', 'ST', 'RW'],
+  4: ['LW', 'LF', 'RF', 'RW'],
+  5: ['LW', 'LF', 'CF', 'RF', 'RW'],
+};
+
+export function rolesForLine(lineIndex, count, totalLines) {
+  const clamped = Math.min(Math.max(count, 1), 5);
+  const outfieldLines = totalLines; // number of outfield lines (GK excluded)
+
+  // First outfield line is always defence
+  if (lineIndex === 0) return (backLineRoles[clamped] ?? backLineRoles[4]).slice();
+
+  // Last outfield line is always attack
+  if (lineIndex === outfieldLines - 1) return (frontLineRoles[clamped] ?? frontLineRoles[1]).slice();
+
+  // Middle lines: if exactly one middle line → generic midfield
+  // If two middle lines → lower is defensive, upper is attacking
+  const middleCount = outfieldLines - 2; // number of non-back, non-front lines
+
+  if (middleCount <= 1) return (midGenericRoles[clamped] ?? midGenericRoles[3]).slice();
+
+  const middleIndex = lineIndex - 1; // 0-based within middle lines
+  if (middleIndex < middleCount / 2) return (midLowRoles[clamped] ?? midLowRoles[1]).slice();
+
+  return (midHighRoles[clamped] ?? midHighRoles[1]).slice();
+}
+
+/**
+ * Parse a dash-separated formation string (e.g. "4-3-3", "4-1-4-1") into a
+ * formation object with auto-mapped roles. Returns null for invalid input.
+ */
+export function parseFormationString(input) {
+  const cleaned = input.replace(/\s+/g, '').replace(/–/g, '-');
+
+  if (!/^\d(-\d){1,5}$/.test(cleaned)) return null;
+
+  const lines = cleaned.split('-').map(Number);
+  const outfieldTotal = lines.reduce((sum, n) => sum + n, 0);
+
+  if (outfieldTotal !== 10 || lines.some((n) => n < 1 || n > 5)) return null;
+
+  const roles = ['GK'];
+  lines.forEach((count, index) => {
+    roles.push(...rolesForLine(index, count, lines.length));
+  });
+
+  return {
+    id: `custom-${cleaned}`,
+    label: cleaned.split('-').join('–'),
+    eyebrow: 'Custom shape',
+    detail: 'User-defined formation',
+    roles,
+  };
+}

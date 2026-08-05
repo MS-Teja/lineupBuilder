@@ -248,7 +248,7 @@ const drawCover = (context, image, x, y, size) => {
   context.drawImage(image, drawX, drawY, width, height);
 };
 
-const drawPlayer = (context, slot, coordinate, field, portraits) => {
+const drawPlayer = (context, slot, coordinate, field, portraits, orientation) => {
   const displayCoordinate = slot.renderCoordinate ?? coordinate;
   const point = {
     x: field.x + (displayCoordinate.x / 100) * field.width,
@@ -260,7 +260,7 @@ const drawPlayer = (context, slot, coordinate, field, portraits) => {
   const hidden = Boolean(profile) && !slot.isRevealed && slot.renderOpacity === undefined;
   const opacity = slot.renderOpacity ?? 1;
 
-  if (profile && slot.renderPlaceholder) {
+  if (profile && slot.renderPlaceholder === 'hidden') {
     context.save();
     context.translate(point.x, point.y);
     context.scale(slot.renderScale ?? 1, slot.renderScale ?? 1);
@@ -326,30 +326,63 @@ const drawPlayer = (context, slot, coordinate, field, portraits) => {
       context.textAlign = 'center';
       context.textBaseline = 'middle';
       context.fillText(String(profile.number ?? '—'), 0, 1);
-    } else {
-      const badge = marker * 0.34;
-      context.fillStyle = '#e9efdf';
-      context.beginPath();
-      context.arc(radius * 0.58, radius * 0.58, badge / 2, 0, Math.PI * 2);
-      context.fill();
-      context.fillStyle = '#142218';
-      context.font = `800 ${Math.round(marker * 0.16)}px Outfit, sans-serif`;
+    }
+
+    if (orientation === 'landscape') {
+      const name = labelFor(profile.name);
+      const hasBadge = Boolean(portrait && profile.number != null);
+      let textX = 0;
+      let badgeX = 0;
+      let badgeWidth = 0;
+      
+      const gap = marker * 0.12;
+      const nameFont = `700 ${Math.round(marker * 0.22)}px Outfit, sans-serif`;
+      const badgeFont = `800 ${Math.round(marker * 0.18)}px Outfit, sans-serif`;
+      
+      if (hasBadge) {
+        context.font = badgeFont;
+        const numText = String(profile.number);
+        const numMetrics = context.measureText(numText);
+        badgeWidth = numMetrics.width + marker * 0.16;
+        
+        context.font = nameFont;
+        const nameMetrics = context.measureText(name);
+        
+        const totalWidth = badgeWidth + gap + nameMetrics.width;
+        badgeX = -(totalWidth / 2) + badgeWidth / 2;
+        textX = badgeX + (badgeWidth / 2) + gap + (nameMetrics.width / 2);
+      }
+      
+      const detailsY = radius + marker * 0.18;
+      
+      if (hasBadge) {
+        context.fillStyle = '#e7eddb';
+        context.beginPath();
+        const badgeHeight = marker * 0.26;
+        const badgeR = marker * 0.05;
+        const bx = badgeX - badgeWidth / 2;
+        const by = detailsY - marker * 0.02;
+        context.roundRect(bx, by, badgeWidth, badgeHeight, badgeR);
+        context.fill();
+        
+        context.fillStyle = '#152016';
+        context.font = badgeFont;
+        context.textAlign = 'center';
+        context.textBaseline = 'top';
+        context.fillText(String(profile.number), badgeX, by + marker * 0.04);
+      }
+      
+      context.shadowColor = 'rgba(2, 10, 5, 0.82)';
+      context.shadowBlur = marker * 0.1;
+      context.shadowOffsetY = 2;
+      context.fillStyle = 'rgba(244, 248, 239, 0.9)';
+      context.font = nameFont;
       context.textAlign = 'center';
-      context.textBaseline = 'middle';
-      context.fillText(String(profile.number ?? '—'), radius * 0.58, radius * 0.58 + 1);
+      context.textBaseline = 'top';
+      context.fillText(name, textX, detailsY);
     }
   }
-
-  if (!hidden) {
-    context.shadowColor = 'rgba(2, 10, 5, 0.82)';
-    context.shadowBlur = marker * 0.1;
-    context.shadowOffsetY = 2;
-    context.fillStyle = '#f0f4ea';
-    context.font = `700 ${Math.round(marker * 0.22)}px Outfit, sans-serif`;
-    context.textAlign = 'center';
-    context.textBaseline = 'top';
-    context.fillText(labelFor(profile.name), 0, radius + marker * 0.17);
-  }
+  
   context.restore();
 };
 
@@ -385,8 +418,12 @@ export const interpolateScene = (fromScene, toScene, progress, motion) => {
     orientation,
     slots: fromScene.slots.map((fromSlot) => {
       const toSlot = bySlotId.get(fromSlot.id) ?? fromSlot;
-      const fromCoordinate = getCoordinates(fromSlot.positionId, orientation);
-      const toCoordinate = getCoordinates(toSlot.positionId, orientation);
+      const rawFrom = getCoordinates(fromSlot.positionId, orientation);
+      const rawTo = getCoordinates(toSlot.positionId, orientation);
+      const fromCoordinate = (fromSlot.customX != null && fromSlot.customY != null)
+        ? { ...rawFrom, x: fromSlot.customX, y: fromSlot.customY } : rawFrom;
+      const toCoordinate = (toSlot.customX != null && toSlot.customY != null)
+        ? { ...rawTo, x: toSlot.customX, y: toSlot.customY } : rawTo;
       const fromVisible = Boolean(fromSlot.profile && fromSlot.isRevealed);
       const toVisible = Boolean(toSlot.profile && toSlot.isRevealed);
       const playerMotion = playerMotionFor({ fromVisible, toVisible, progress, motion });
@@ -397,7 +434,9 @@ export const interpolateScene = (fromScene, toScene, progress, motion) => {
         profile,
         accent: toSlot.accent ?? fromSlot.accent,
         isRevealed: fromVisible || toVisible,
-        renderPlaceholder: Boolean(profile) && (fromVisible !== toVisible),
+        renderPlaceholder: Boolean(profile) && (fromVisible !== toVisible)
+          ? (fromSlot.profile && toSlot.profile ? 'hidden' : 'empty')
+          : false,
         renderCoordinate: {
           x: mix(fromCoordinate.x, toCoordinate.x, movementProgress),
           y: mix(fromCoordinate.y, toCoordinate.y, movementProgress),
@@ -422,8 +461,10 @@ export const renderSceneToCanvas = (scene, { portraits = new Map() } = {}) => {
 
   drawPitch(context, geometry, orientation);
   scene.slots.forEach((slot) => {
-    const coordinate = getCoordinates(slot.positionId, orientation);
-    drawPlayer(context, slot, coordinate, geometry.field, portraits);
+    const rawCoord = getCoordinates(slot.positionId, orientation);
+    const coordinate = (slot.customX != null && slot.customY != null)
+      ? { ...rawCoord, x: slot.customX, y: slot.customY } : rawCoord;
+    drawPlayer(context, slot, coordinate, geometry.field, portraits, orientation);
   });
 
   return canvas;
