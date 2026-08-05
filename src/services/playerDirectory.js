@@ -1,24 +1,18 @@
 import { demoDirectory } from '../utils/formations';
 
-const SOFASCORE_API_ROOT = 'https://api.sofascore.com/api/v1';
-const SOFASCORE_IMAGE_ROOT = 'https://api.sofascore.app/api/v1';
-
 const normalizeText = (value = '') => value.toLocaleLowerCase();
 
-const normalizeSofaScorePlayer = (player) => {
-  const entity = player.entity;
-  return {
-    id: `sofascore-${entity.id}`,
-    provider: 'sofascore',
-    providerId: entity.id,
-    name: entity.name ?? 'Unnamed player',
-    photo: `${SOFASCORE_IMAGE_ROOT}/player/${entity.id}/image`,
-    club: entity.team?.name || 'Club unavailable',
-    country: entity.country?.name || 'Country unavailable',
-    position: entity.position || 'Player',
-    number: entity.jerseyNumber ? Number(entity.jerseyNumber) : null,
-  };
-};
+const normalizeWikipediaPlayer = (page) => ({
+  id: `wiki-${page.pageid}`,
+  provider: 'wikipedia',
+  providerId: page.pageid,
+  name: page.title ?? 'Unnamed player',
+  photo: page.thumbnail?.source || null,
+  club: 'Wikipedia Result',
+  country: 'Unknown',
+  position: 'Player',
+  number: null,
+});
 
 const searchLocalDirectory = (query) => {
   const term = normalizeText(query.trim());
@@ -73,13 +67,14 @@ export async function searchPlayerDirectory(query, { signal } = {}) {
       };
     }
 
-    const url = `${SOFASCORE_API_ROOT}/search/all?q=${encodeURIComponent(cleanQuery)}`;
+    const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(cleanQuery + ' footballer')}&gsrlimit=6&prop=pageimages&piprop=thumbnail&pithumbsize=400&format=json&origin=*`;
     const payload = await requestJson(url, signal);
-    const results = payload.results || [];
+    const pages = payload.query?.pages ? Object.values(payload.query.pages) : [];
     
-    const remotePlayers = results
-      .filter((r) => r.type === 'player' && r.entity)
-      .map(normalizeSofaScorePlayer);
+    // Sort by Wikipedia's search index to keep relevance
+    pages.sort((a, b) => (a.index || 0) - (b.index || 0));
+    
+    const remotePlayers = pages.map(normalizeWikipediaPlayer);
 
     return {
       players: [...remotePlayers, ...localMatches]
