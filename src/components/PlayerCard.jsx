@@ -1,63 +1,72 @@
-import React, { useRef } from 'react';
+import { Plus } from 'lucide-react';
+import { useState } from 'react';
 
-const PlayerCard = ({ player, coordinates, onClick, onDragStart, onDragEnd }) => {
-  const isHidden = !player.isRevealed;
-  const photoRef = useRef(null);
+const labelFor = (name) => name.split(' ').filter(Boolean).at(-1) || name;
 
-  const handleDragStart = (e) => {
-    // Clone the photo circle so we have a clean, un-transformed DOM node for the drag snapshot
-    if (photoRef.current) {
-      const clone = photoRef.current.cloneNode(true);
-      
-      // Style the clone to be visible but off-screen and independent of parents' flex layouts
-      clone.style.position = 'absolute';
-      clone.style.top = '-1000px';
-      clone.style.left = '-1000px';
-      clone.style.transform = 'none'; // Essential: remove scales/transforms that cause the cone 
-      
-      document.body.appendChild(clone);
-      e.dataTransfer.setDragImage(clone, 28, 28);
-      
-      // Clean up the clone from the DOM after the drag starts
-      setTimeout(() => {
-        if (clone.parentNode) {
-          clone.parentNode.removeChild(clone);
-        }
-      }, 0);
-    }
-    
-    // Bubble up to Pitch component
-    onDragStart(e);
+function Portrait({ player }) {
+  const [hasImageError, setHasImageError] = useState(false);
+
+  if (player.photo && !hasImageError) {
+    return <img src={player.photo} alt="" crossOrigin="anonymous" onError={() => setHasImageError(true)} />;
+  }
+
+  return null;
+}
+
+export default function PlayerCard({
+  slot,
+  coordinates,
+  role,
+  selected,
+  motion,
+  onSelect,
+  onDragStart,
+  onDragEnd,
+}) {
+  const isEmpty = !slot.profile;
+  const isConcealed = !isEmpty && !slot.isRevealed;
+  const style = {
+    '--x': `${coordinates.x}cqw`,
+    '--y': `${coordinates.y}cqh`,
+    '--player-accent': slot.accent,
   };
 
-  return (
-    <div 
-      className={`player-node-wrapper ${isHidden ? 'player-info-hidden' : ''}`}
-      style={{ top: `${coordinates.top}%`, left: `${coordinates.left}%` }}
-      onClick={() => onClick(player)}
-      draggable
-      onDragStart={handleDragStart}
-      onDragEnd={onDragEnd}
-    >
-      <div className="player-photo-container" ref={photoRef}>
-        {player.photo ? (
-          <img src={player.photo} alt={player.name} />
-        ) : (
-          <span className="player-initials">
-            {player.number ? player.number : coordinates.role}
-          </span>
-        )}
-        {player.photo && player.number && (
-          <div className="player-number-badge">{player.number}</div>
-        )}
+  if (isEmpty) {
+    return (
+      <div className="player-pin slot-pin" style={style}>
+        <button
+          type="button"
+          className={`slot-marker ${selected ? 'is-selected' : ''}`}
+          onClick={() => onSelect(slot.id)}
+          aria-label={`Add a player to ${role.label}`}
+        >
+          <span className="slot-add"><Plus size={18} strokeWidth={2.25} /></span>
+        </button>
       </div>
-      {player.name && (
-        <div className="player-nameplate">
-          {player.name}
-        </div>
-      )}
+    );
+  }
+
+  return (
+    <div
+      className={`player-pin ${selected ? 'is-selected' : ''} ${slot.isRemoving ? 'is-removing' : ''} ${slot.motionKey ? 'is-fresh' : ''} entry-${motion.playerEntry} exit-${motion.playerExit}`}
+      style={style}
+    >
+      <button
+        type="button"
+        className={`player-token ${isConcealed ? 'is-concealed' : ''}`}
+        onClick={() => onSelect(slot.id)}
+        onDragStart={(event) => onDragStart(event, slot.id)}
+        onDragEnd={onDragEnd}
+        draggable={!slot.isRemoving}
+        aria-pressed={selected}
+        aria-label={`${slot.profile.name}, ${role.label}`}
+      >
+        <span className={`player-circle ${slot.profile.photo && !isConcealed ? 'has-photo' : 'is-number-only'}`}>
+          {!isConcealed && <Portrait key={slot.profile.id ?? `${slot.profile.name}-${slot.profile.photo ?? ''}`} player={slot.profile} />}
+          {!isConcealed && <span className="player-number">{slot.profile.number ?? '—'}</span>}
+        </span>
+        <span className="player-label">{labelFor(slot.profile.name)}</span>
+      </button>
     </div>
   );
-};
-
-export default PlayerCard;
+}

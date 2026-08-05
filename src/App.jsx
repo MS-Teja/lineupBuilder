@@ -1,138 +1,538 @@
-import React, { useState, useRef } from 'react';
-import html2canvas from 'html2canvas';
-import Sidebar from './components/Sidebar';
+import { Download, FileVideo, Film, LayoutPanelTop, UserRound, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import FormationPanel from './components/FormationPanel';
+import MotionTimeline from './components/MotionTimeline';
 import Pitch from './components/Pitch';
-import PlayerEditModal from './components/PlayerEditModal';
-import { formations, defaultPlayers } from './utils/formations';
+import PlayerDirectory from './components/PlayerDirectory';
+import PlayerInspector from './components/PlayerInspector';
+import { exportGif, exportStill, exportVideo } from './services/animationExport';
+import {
+  emptySlot,
+  getFormation,
+  initialSlots,
+} from './utils/formations';
 import './App.css';
 
+const accents = ['#c4a15b', '#d48657', '#c96f68', '#a8799b', '#7a7fad', '#548da0', '#579b81'];
+
+const accentFor = (player) => {
+  const code = [...(player.name || 'player')].reduce((total, character) => total + character.charCodeAt(0), 0);
+  return accents[code % accents.length];
+};
+
+const reducedMotion = () =>
+  typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+const waitForPaint = () => new Promise((resolve) => {
+  requestAnimationFrame(() => requestAnimationFrame(resolve));
+});
+
+const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
+const makeScene = (slots, formationId, isCustomShape) => ({
+  formationId,
+  isCustomShape,
+  slots: slots.map((slot) => ({
+    id: slot.id,
+    positionId: slot.positionId,
+    isRevealed: slot.isRevealed,
+  })),
+});
+
+const materializeExportScene = (baseSlots, scene, orientation) => {
+  const bySlotId = new Map(scene.slots.map((slot) => [slot.id, slot]));
+  return {
+    orientation,
+    slots: baseSlots.map((slot) => {
+      const state = bySlotId.get(slot.id);
+      return {
+        ...slot,
+        positionId: state?.positionId ?? slot.positionId,
+        isRevealed: state?.isRevealed ?? slot.isRevealed,
+        isRemoving: false,
+      };
+    }),
+  };
+};
+
+const hiddenOpeningScene = makeScene(
+  initialSlots.map((slot) => ({ ...slot, isRevealed: false })),
+  '4-3-3',
+  false,
+);
+
+const defaultKeyframes = () => [
+  {
+    id: 'cue-opening',
+    label: 'Opening',
+    duration: 500,
+    scene: hiddenOpeningScene,
+  },
+  {
+    id: 'cue-full-xi',
+    label: 'Full XI',
+    duration: 900,
+    scene: makeScene(initialSlots, '4-3-3', false),
+  },
+];
+
+const fileStem = (formation, orientation) => `tactical-lineup-${formation.label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${orientation}`;
+
 function App() {
-  const [formation, setFormation] = useState('4-3-3');
-  const [players, setPlayers] = useState(defaultPlayers);
-  const [editingPlayer, setEditingPlayer] = useState(null);
-  
-  // Layout Controls
-  const [pitchOrientation, setPitchOrientation] = useState('vertical');
-  const [pitchAspectRatio, setPitchAspectRatio] = useState(0.7); // 1 = square, <1 = tall, >1 = wide
+  const [formationId, setFormationId] = useState('4-3-3');
+  const [isCustomShape, setIsCustomShape] = useState(false);
+  const [slots, setSlots] = useState(initialSlots);
+  const [selectedSlotId, setSelectedSlotId] = useState('slot-10');
+  const [orientation, setOrientation] = useState('landscape');
+  const [isDirectoryOpen, setIsDirectoryOpen] = useState(false);
+  const [activePanel, setActivePanel] = useState(null);
+  const [keyframes, setKeyframes] = useState(defaultKeyframes);
+  const [activeKeyframeId, setActiveKeyframeId] = useState('cue-full-xi');
+  const [motion, setMotion] = useState({
+    playerEntry: 'lift',
+    playerExit: 'sink',
+    formationTransition: 'flow',
+    formationDuration: 520,
+  });
+  const [motionOverride, setMotionOverride] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [exportState, setExportState] = useState(null);
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+  const removalTimers = useRef([]);
+  const playbackToken = useRef(0);
 
-  const pitchRef = useRef(null);
+  useEffect(() => () => {
+    window.clearTimeout(toastTimer.current);
+    removalTimers.current.forEach((timer) => window.clearTimeout(timer));
+    playbackToken.current += 1;
+  }, []);
 
-  const handlePlayerClick = (player) => {
-    setEditingPlayer(player);
+  const selectedSlot = slots.find((slot) => slot.id === selectedSlotId) ?? slots[0];
+  const baseFormation = getFormation(formationId);
+  const formation = useMemo(() => (
+    isCustomShape
+      ? { ...baseFormation, label: 'Custom', detail: 'Manual role arrangement', eyebrow: 'Tactical adjustment' }
+      : baseFormation
+  ), [baseFormation, isCustomShape]);
+  const isFull = slots.every((slot) => slot.profile);
+  const isExporting = Boolean(exportState);
+  const activeMotion = motionOverride ?? motion;
+
+  const announce = (message, onUndo) => {
+    window.clearTimeout(toastTimer.current);
+    setToast({ message, onUndo });
+    toastTimer.current = window.setTimeout(() => setToast(null), 5000);
   };
 
-  const handleSavePlayer = (updatedPlayer) => {
-    setPlayers(prev => prev.map(p => p.id === updatedPlayer.id ? updatedPlayer : p));
-    setEditingPlayer(null);
+  const applyScene = (scene) => {
+    if (!scene) return;
+
+    const bySlotId = new Map(scene.slots.map((slot) => [slot.id, slot]));
+    setFormationId(scene.formationId);
+    setIsCustomShape(scene.isCustomShape);
+    setSlots((current) => current.map((slot) => {
+      const next = bySlotId.get(slot.id);
+      if (!next) return slot;
+      const isEntering = Boolean(slot.profile) && !slot.isRevealed && next.isRevealed;
+      return {
+        ...slot,
+        positionId: next.positionId,
+        isRevealed: next.isRevealed,
+        isRemoving: false,
+        motionKey: isEntering ? slot.motionKey + 1 : slot.motionKey,
+      };
+    }));
   };
 
-  // When a preset formation is selected, update all players' positions
-  React.useEffect(() => {
-    if (formation !== 'Custom' && formations[formation]) {
-      const presetPositions = formations[formation];
-      setPlayers(prev => prev.map((p, index) => ({
-        ...p,
-        positionId: presetPositions[index] || p.positionId
-      })));
-    }
-  }, [formation]);
+  const changeFormation = (nextFormationId) => {
+    if (nextFormationId === formationId && !isCustomShape) return;
 
-  const handlePlayerPositionChange = (playerId, newPositionId) => {
-    setPlayers(prev => {
-      const newPlayers = [...prev];
-      const draggedPlayerIndex = newPlayers.findIndex(p => p.id === playerId);
-      if (draggedPlayerIndex === -1) return prev;
-      
-      const existingPlayerIndex = newPlayers.findIndex(p => p.positionId === newPositionId);
-      
-      if (existingPlayerIndex !== -1 && existingPlayerIndex !== draggedPlayerIndex) {
-        // Swap positions
-        const oldPosId = newPlayers[draggedPlayerIndex].positionId;
-        newPlayers[existingPlayerIndex].positionId = oldPosId;
-      }
-      
-      newPlayers[draggedPlayerIndex].positionId = newPositionId;
-      return newPlayers;
-    });
-    setFormation('Custom');
+    const nextFormation = getFormation(nextFormationId);
+    const previousLabel = formation.label;
+
+    setFormationId(nextFormationId);
+    setIsCustomShape(false);
+    setSlots((current) => current.map((slot, index) => ({
+      ...slot,
+      positionId: nextFormation.roles[index] ?? slot.positionId,
+    })));
+    announce(`${previousLabel} morphed into ${nextFormation.label}.`);
   };
 
-  const togglePlayerVisibility = (id) => {
-    setPlayers(prev => prev.map(p => p.id === id ? { ...p, isRevealed: !p.isRevealed } : p));
-  };
+  const moveSlot = (sourceSlotId, destinationSlotId) => {
+    setSlots((current) => {
+      const source = current.find((slot) => slot.id === sourceSlotId);
+      const destination = current.find((slot) => slot.id === destinationSlotId);
 
-  const hideAllPlayers = () => {
-    setPlayers(prev => prev.map(p => ({ ...p, isRevealed: false })));
-  };
+      if (!source || !destination) return current;
 
-  const revealAllPlayers = () => {
-    setPlayers(prev => prev.map(p => ({ ...p, isRevealed: true })));
-  };
-
-  const handleExport = async () => {
-    if (!pitchRef.current) return;
-    try {
-      const element = pitchRef.current;
-      // Get the bounding box of the actual element to prevent capturing excessive whitespace
-      // or dealing with scroll offsets improperly.
-      const rect = element.getBoundingClientRect();
-
-      const canvas = await html2canvas(element, {
-        backgroundColor: '#0f172a',
-        scale: 3, // Increase scale factor for sharper images
-        useCORS: true,
-        allowTaint: true,
-        width: rect.width,
-        height: rect.height,
-        // Optional: you can manually adjust x/y if there are offset issues, though
-        // leaving the window size alone usually works best for non-scrolling elements.
+      return current.map((slot) => {
+        if (slot.id === sourceSlotId) return { ...slot, positionId: destination.positionId };
+        if (slot.id === destinationSlotId) return { ...slot, positionId: source.positionId };
+        return slot;
       });
-      const image = canvas.toDataURL('image/png', 1.0);
-      const link = document.createElement('a');
-      link.href = image;
-      link.download = `lineup-${formation}.png`;
-      link.click();
-    } catch (error) {
-      console.error("Export failed:", error);
+    });
+    setIsCustomShape(true);
+    announce('Roles swapped. This is now a custom shape.');
+  };
+
+  const selectSlot = (slotId) => {
+    const slot = slots.find((item) => item.id === slotId);
+    setSelectedSlotId(slotId);
+    setActivePanel('player');
+    setIsDirectoryOpen(!slot?.profile);
+  };
+
+  const toggleVisibility = (slotId) => {
+    setSlots((current) => current.map((slot) => {
+      if (slot.id !== slotId || !slot.profile) return slot;
+      const isRevealed = !slot.isRevealed;
+      return {
+        ...slot,
+        isRevealed,
+        motionKey: isRevealed ? slot.motionKey + 1 : slot.motionKey,
+      };
+    }));
+  };
+
+  const assignPlayer = (player) => {
+    const target = slots.find((slot) => slot.id === selectedSlotId) ?? slots[0];
+    const previousSlot = target;
+    const replacing = Boolean(previousSlot.profile);
+
+    setSlots((current) => current.map((slot) => (
+      slot.id === target.id
+        ? {
+            ...slot,
+            profile: { ...player, number: player.number ?? slot.profile?.number ?? null },
+            isRevealed: true,
+            isRemoving: false,
+            motionKey: slot.motionKey + 1,
+            accent: accentFor(player),
+          }
+        : slot
+    )));
+    setIsDirectoryOpen(false);
+
+    announce(
+      replacing ? `${player.name} replaces ${previousSlot.profile.name}.` : `${player.name} added at ${target.positionId}.`,
+      replacing
+        ? () => setSlots((current) => current.map((slot) => (
+          slot.id === target.id
+            ? { ...previousSlot, positionId: slot.positionId, motionKey: slot.motionKey + 1 }
+            : slot
+        )))
+        : () => setSlots((current) => current.map((slot) => (
+          slot.id === target.id ? emptySlot(slot.id, slot.positionId, slot.motionKey + 1) : slot
+        )))
+    );
+  };
+
+  const updateSelectedPlayer = (profile) => {
+    setSlots((current) => current.map((slot) => (
+      slot.id === selectedSlot.id ? { ...slot, profile } : slot
+    )));
+    announce('Player details updated.');
+  };
+
+  const removePlayer = (slotId) => {
+    const currentSlot = slots.find((slot) => slot.id === slotId);
+    if (!currentSlot?.profile || currentSlot.isRemoving) return;
+
+    setSlots((current) => current.map((slot) => (
+      slot.id === slotId ? { ...slot, isRemoving: true } : slot
+    )));
+
+    const finalizeRemoval = () => {
+      setSlots((current) => current.map((slot) => (
+        slot.id === slotId ? emptySlot(slot.id, slot.positionId, slot.motionKey + 1) : slot
+      )));
+      announce(`${currentSlot.profile.name} moved off the board.`, () => {
+        setSlots((current) => current.map((slot) => (
+          slot.id === slotId
+            ? { ...currentSlot, positionId: slot.positionId, isRemoving: false, motionKey: slot.motionKey + 1 }
+            : slot
+        )));
+      });
+    };
+
+    if (reducedMotion()) {
+      finalizeRemoval();
+      return;
+    }
+
+    const timer = window.setTimeout(finalizeRemoval, 260);
+    removalTimers.current.push(timer);
+  };
+
+  const openPlayerSearch = () => {
+    const vacantSlot = slots.find((slot) => !slot.profile);
+    const target = vacantSlot ?? selectedSlot;
+    setSelectedSlotId(target.id);
+    setActivePanel('player');
+    setIsDirectoryOpen(true);
+    announce(vacantSlot ? `Choose a player for ${target.positionId}.` : `Choose a replacement for ${target.profile.name}.`);
+  };
+
+  const addKeyframe = () => {
+    if (keyframes.length >= 8) {
+      announce('Keep the cue to eight keyframes or fewer for a crisp export.');
+      return;
+    }
+
+    const id = `cue-${Date.now()}`;
+    const keyframe = {
+      id,
+      label: `Cue ${String(keyframes.length + 1).padStart(2, '0')}`,
+      duration: 850,
+      scene: makeScene(slots, formationId, isCustomShape),
+    };
+
+    setKeyframes((current) => [...current, keyframe]);
+    setActiveKeyframeId(id);
+    announce('Current lineup state captured as a keyframe.');
+  };
+
+  const selectKeyframe = (keyframeId) => {
+    const keyframe = keyframes.find((item) => item.id === keyframeId);
+    if (!keyframe) return;
+    setActiveKeyframeId(keyframeId);
+    applyScene(keyframe.scene);
+  };
+
+  const removeKeyframe = (keyframeId) => {
+    if (keyframes.length <= 1) return;
+    const index = keyframes.findIndex((item) => item.id === keyframeId);
+    const next = keyframes.filter((item) => item.id !== keyframeId);
+    setKeyframes(next);
+    if (activeKeyframeId === keyframeId) setActiveKeyframeId(next[Math.max(0, index - 1)].id);
+  };
+
+  const updateKeyframe = (keyframeId, patch) => {
+    setKeyframes((current) => current.map((keyframe) => (
+      keyframe.id === keyframeId ? { ...keyframe, ...patch } : keyframe
+    )));
+  };
+
+  const runTimeline = async () => {
+    if (isPlaying || isExporting || !keyframes.length) return;
+
+    const token = playbackToken.current + 1;
+    playbackToken.current = token;
+    setIsPlaying(true);
+
+    try {
+      for (let index = 0; index < keyframes.length; index += 1) {
+        if (playbackToken.current !== token) return;
+        const keyframe = keyframes[index];
+        if (index === 0) setMotionOverride({ ...motion, formationTransition: 'cut', formationDuration: 1 });
+        else setMotionOverride(null);
+        applyScene(keyframe.scene);
+        setActiveKeyframeId(keyframe.id);
+        await waitForPaint();
+        if (index === 0) setMotionOverride(null);
+        await wait(reducedMotion() ? 0 : keyframe.duration);
+      }
+      announce('Animation preview complete.');
+    } finally {
+      if (playbackToken.current === token) {
+        setMotionOverride(null);
+        setIsPlaying(false);
+      }
     }
   };
 
-  const formationData = formations[formation] || formations['4-3-3'];
+  const exportBoard = async () => {
+    if (isExporting || isPlaying) return;
+    const stem = fileStem(formation, orientation);
+    setExportState({ format: 'png', progress: 15 });
+
+    try {
+      await exportStill({
+        scene: materializeExportScene(slots, makeScene(slots, formationId, isCustomShape), orientation),
+        filename: `${stem}.png`,
+      });
+      setExportState({ format: 'png', progress: 100 });
+      announce('Current tactical frame exported as PNG.');
+    } catch (error) {
+      console.error('PNG export failed', error);
+      announce(error.message || 'PNG export could not be completed.');
+    } finally {
+      setExportState(null);
+    }
+  };
+
+  const exportTimeline = async (format) => {
+    if (isExporting || isPlaying) return;
+
+    const stem = fileStem(formation, orientation);
+    setExportState({ format, progress: 0 });
+
+    const frames = keyframes.map((keyframe) => ({
+      ...keyframe,
+      scene: materializeExportScene(slots, keyframe.scene, orientation),
+    }));
+
+    const onProgress = ({ captured, total }) => {
+      setExportState({ format, progress: Math.max(1, Math.round((captured / total) * 100)) });
+    };
+
+    try {
+      if (format === 'gif') {
+        await exportGif({
+          frames,
+          motion,
+          onProgress,
+          filename: `${stem}.gif`,
+        });
+        announce(`High-resolution GIF exported from ${keyframes.length} keyframes.`);
+      } else {
+        const extension = await exportVideo({
+          frames,
+          motion,
+          onProgress,
+          filenameBase: stem,
+        });
+        announce(`${extension === 'mp4' ? 'MP4' : 'WebM'} video exported from ${keyframes.length} keyframes.`);
+      }
+    } catch (error) {
+      console.error(`${format} export failed`, error);
+      announce(error.message || `${format.toUpperCase()} export could not be completed.`);
+    } finally {
+      setExportState(null);
+    }
+  };
+
+  const togglePanel = (panel) => {
+    if (activePanel === panel) {
+      setActivePanel(null);
+      if (panel === 'player') setIsDirectoryOpen(false);
+      return;
+    }
+
+    setActivePanel(panel);
+    if (panel !== 'player') setIsDirectoryOpen(false);
+  };
 
   return (
-    <div className="app-container">
-      <Sidebar 
-        formation={formation}
-        setFormation={setFormation}
-        players={players}
-        activePlayerId={editingPlayer?.id}
-        onPlayerSelect={handlePlayerClick}
-        onExport={handleExport}
-        togglePlayerVisibility={togglePlayerVisibility}
-        hideAllPlayers={hideAllPlayers}
-        revealAllPlayers={revealAllPlayers}
-        pitchOrientation={pitchOrientation}
-        setPitchOrientation={setPitchOrientation}
-        pitchAspectRatio={pitchAspectRatio}
-        setPitchAspectRatio={setPitchAspectRatio}
-      />
-      <main className="main-content">
-        <Pitch 
-          pitchRef={pitchRef}
-          players={players}
-          onPlayerClick={handlePlayerClick}
-          onPlayerPositionChange={handlePlayerPositionChange}
-          orientation={pitchOrientation}
-          aspectRatio={pitchAspectRatio}
-        />
+    <div className="studio-app">
+      <header className="studio-topbar">
+        <div className="canvas-toolbar" aria-label="Canvas controls">
+          <button
+            type="button"
+            className={`toolbar-button ${activePanel === 'formation' ? 'is-active' : ''}`}
+            onClick={() => togglePanel('formation')}
+            aria-pressed={activePanel === 'formation'}
+          >
+            <LayoutPanelTop size={16} />
+            <span>Board</span>
+          </button>
+          <button
+            type="button"
+            className={`toolbar-button ${activePanel === 'player' ? 'is-active' : ''}`}
+            onClick={() => togglePanel('player')}
+            aria-pressed={activePanel === 'player'}
+          >
+            <UserRound size={16} />
+            <span>Player</span>
+          </button>
+          <button
+            type="button"
+            className={`toolbar-button ${activePanel === 'motion' ? 'is-active' : ''}`}
+            onClick={() => togglePanel('motion')}
+            aria-pressed={activePanel === 'motion'}
+          >
+            <Film size={16} />
+            <span>Motion</span>
+          </button>
+        </div>
+
+        <button type="button" className="export-button" onClick={() => exportTimeline('video')} disabled={isExporting || isPlaying}>
+          {isExporting ? <FileVideo size={17} className="is-spinning" /> : <Download size={17} />}
+          {isExporting ? 'Rendering…' : 'Export video'}
+        </button>
+      </header>
+
+      <main className="studio-workspace">
+        <div className="stage-column">
+          <Pitch
+            slots={slots}
+            selectedSlotId={selectedSlot.id}
+            formation={formation}
+            orientation={orientation}
+            motion={activeMotion}
+            onSelectSlot={selectSlot}
+            onMoveSlot={moveSlot}
+          />
+        </div>
+
+        {activePanel === 'formation' && (
+          <aside className="canvas-drawer formation-drawer" aria-label="Board controls">
+            <FormationPanel
+              formationId={isCustomShape ? null : formationId}
+              orientation={orientation}
+              isFull={isFull}
+              onFormationChange={changeFormation}
+              onOrientationChange={setOrientation}
+              onAddPlayer={openPlayerSearch}
+              onClose={() => setActivePanel(null)}
+            />
+          </aside>
+        )}
+
+        {activePanel === 'player' && (
+          <aside className="canvas-drawer player-drawer" aria-label="Player controls">
+            <PlayerInspector
+              key={`inspector-${selectedSlot.id}`}
+              slot={selectedSlot}
+              onToggleVisibility={toggleVisibility}
+              onRemovePlayer={removePlayer}
+              onUpdatePlayer={updateSelectedPlayer}
+              onOpenDirectory={() => setIsDirectoryOpen(true)}
+              onClose={() => { setActivePanel(null); setIsDirectoryOpen(false); }}
+            />
+            {isDirectoryOpen && (
+              <PlayerDirectory
+                key={`directory-${selectedSlot.id}`}
+                targetSlot={selectedSlot}
+                onAssignPlayer={assignPlayer}
+                onClose={() => setIsDirectoryOpen(false)}
+              />
+            )}
+          </aside>
+        )}
+
+        {activePanel === 'motion' && (
+          <aside className="canvas-drawer motion-drawer" aria-label="Animation and export controls">
+            <MotionTimeline
+              keyframes={keyframes}
+              activeKeyframeId={activeKeyframeId}
+              motion={motion}
+              isExpanded
+              isPlaying={isPlaying}
+              exportState={exportState}
+              onToggle={() => setActivePanel(null)}
+              onSelectKeyframe={selectKeyframe}
+              onAddKeyframe={addKeyframe}
+              onRemoveKeyframe={removeKeyframe}
+              onUpdateKeyframe={updateKeyframe}
+              onMotionChange={(patch) => setMotion((current) => ({ ...current, ...patch }))}
+              onPlay={runTimeline}
+              onExportVideo={() => exportTimeline('video')}
+              onExportGif={() => exportTimeline('gif')}
+              onExportStill={exportBoard}
+            />
+          </aside>
+        )}
       </main>
-      
-      {editingPlayer && (
-        <PlayerEditModal 
-          player={editingPlayer}
-          onClose={() => setEditingPlayer(null)}
-          onSave={handleSavePlayer}
-        />
+
+      {toast && (
+        <div className="studio-toast" role="status">
+          <span>{toast.message}</span>
+          {toast.onUndo && <button type="button" onClick={() => { toast.onUndo(); setToast(null); }}>Undo</button>}
+          <button type="button" aria-label="Dismiss message" onClick={() => setToast(null)}><X size={15} /></button>
+        </div>
       )}
     </div>
   );

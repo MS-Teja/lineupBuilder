@@ -1,87 +1,113 @@
-import React, { useState } from 'react';
+import { GripVertical } from 'lucide-react';
+import { useState } from 'react';
 import PlayerCard from './PlayerCard';
-import { masterPositions } from '../utils/formations';
+import { getCoordinates, roleMap } from '../utils/formations';
 
-const Pitch = ({ pitchRef, players, onPlayerClick, onPlayerPositionChange, orientation, aspectRatio }) => {
-  const isHorizontal = orientation === 'horizontal';
-  const [isDragging, setIsDragging] = useState(false);
+const phaseFor = (unit) => {
+  if (unit === 'Goalkeeper') return 0;
+  if (unit === 'Back line') return 1;
+  if (unit === 'Midfield') return 2;
+  return 3;
+};
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
+export default function Pitch({
+  slots,
+  selectedSlotId,
+  formation,
+  orientation,
+  motion,
+  onSelectSlot,
+  onMoveSlot,
+}) {
+  const [draggedSlotId, setDraggedSlotId] = useState(null);
+
+  const startDrag = (event, slotId) => {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', slotId);
+    requestAnimationFrame(() => setDraggedSlotId(slotId));
   };
 
-  const handleDrop = (e, positionId) => {
-    e.preventDefault();
-    const playerId = parseInt(e.dataTransfer.getData('playerId'), 10);
-    if (!isNaN(playerId)) {
-      onPlayerPositionChange(playerId, positionId);
+  const finishDrag = () => setDraggedSlotId(null);
+
+  const handleDrop = (event, destinationSlotId) => {
+    event.preventDefault();
+    const sourceSlotId = event.dataTransfer.getData('text/plain') || draggedSlotId;
+
+    if (sourceSlotId && sourceSlotId !== destinationSlotId) {
+      onMoveSlot(sourceSlotId, destinationSlotId);
     }
+
+    setDraggedSlotId(null);
   };
 
   return (
-    <div className="pitch-wrapper" ref={pitchRef} style={{ aspectRatio: aspectRatio }}>
-      <div className={`pitch ${isHorizontal ? 'horizontal' : 'vertical'}`}>
-        {/* Pitch Markings */}
-        <div className="pitch-line center-line"></div>
-        <div className="pitch-circle center-circle"></div>
-        <div className="center-spot"></div>
-        
-        <div className="pitch-border penalty-area-top"></div>
-        <div className="pitch-border penalty-area-bottom"></div>
-        
-        <div className="pitch-border six-yard-top"></div>
-        <div className="pitch-border six-yard-bottom"></div>
-        
-        <div className="penalty-spot-top"></div>
-        <div className="penalty-spot-bottom"></div>
+    <section className="tactical-stage" aria-label="Tactical pitch">
+      <div
+        className={`pitch-artboard is-${orientation} formation-${motion.formationTransition}`}
+        style={{ '--formation-duration': `${motion.formationDuration}ms` }}
+      >
+        <div className="pitch-surface" aria-label={`${formation.label} tactical layout`}>
+          <div className="pitch-texture" />
+          <div className="pitch-center-line" />
+          <div className="pitch-center-circle" />
+          <div className="pitch-center-spot" />
+          <div className="pitch-box pitch-box-top" />
+          <div className="pitch-box pitch-box-bottom" />
+          <div className="pitch-six pitch-six-top" />
+          <div className="pitch-six pitch-six-bottom" />
+          <div className="pitch-spot pitch-spot-top" />
+          <div className="pitch-spot pitch-spot-bottom" />
+          <div className="pitch-corner pitch-corner-a" />
+          <div className="pitch-corner pitch-corner-b" />
+          <div className="pitch-corner pitch-corner-c" />
+          <div className="pitch-corner pitch-corner-d" />
 
-        {/* Players */}
-        {players.map((player) => {
-          const rawCoords = masterPositions[player.positionId] || { top: 50, left: 50, role: '' };
-          
-          const coordinates = isHorizontal 
-            ? { top: 100 - rawCoords.left, left: rawCoords.top, role: rawCoords.role }
-            : rawCoords;
+          {draggedSlotId && slots.map((slot) => {
+            const coordinates = getCoordinates(slot.positionId, orientation);
+            const role = roleMap[slot.positionId];
 
-          return (
-            <PlayerCard 
-              key={player.id} 
-              player={player} 
-              coordinates={coordinates} 
-              onClick={onPlayerClick}
-              onDragStart={(e) => {
-                e.dataTransfer.setData('playerId', player.id);
-                // Wrap state update in requestAnimationFrame to avoid interrupting the native drag start
-                requestAnimationFrame(() => {
-                  setIsDragging(true);
-                });
-              }}
-              onDragEnd={() => setIsDragging(false)}
-            />
-          );
-        })}
+            return (
+              <div
+                key={`drop-${slot.id}`}
+                className={`drop-target ${slot.id === draggedSlotId ? 'is-source' : ''}`}
+                style={{ '--x': `${coordinates.x}cqw`, '--y': `${coordinates.y}cqh` }}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => handleDrop(event, slot.id)}
+                aria-hidden="true"
+              >
+                <span>{role.label}</span>
+              </div>
+            );
+          })}
 
-        {/* Drop Zones (Only visible when dragging) */}
-        {isDragging && Object.entries(masterPositions).map(([posId, rawCoords]) => {
-          const coordinates = isHorizontal 
-            ? { top: 100 - rawCoords.left, left: rawCoords.top }
-            : rawCoords;
-            
-          return (
-            <div 
-              key={`dropzone-${posId}`}
-              className="drop-zone"
-              style={{ top: `${coordinates.top}%`, left: `${coordinates.left}%` }}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, posId)}
-            >
-              {posId}
+          {slots.map((slot) => {
+            const coordinates = getCoordinates(slot.positionId, orientation);
+            const role = roleMap[slot.positionId];
+
+            return (
+              <div key={`${slot.id}-${slot.motionKey}`} style={{ '--phase': phaseFor(role.unit) }} className="formation-node">
+                <PlayerCard
+                  slot={slot}
+                  coordinates={coordinates}
+                  role={role}
+                  selected={slot.id === selectedSlotId}
+                  motion={motion}
+                  onSelect={onSelectSlot}
+                  onDragStart={startDrag}
+                  onDragEnd={finishDrag}
+                />
+              </div>
+            );
+          })}
+
+          {draggedSlotId && (
+            <div className="drag-instruction" aria-hidden="true">
+              <GripVertical size={14} />
+              Drop to swap roles
             </div>
-          );
-        })}
+          )}
+        </div>
       </div>
-    </div>
+    </section>
   );
-};
-
-export default Pitch;
+}

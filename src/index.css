@@ -1,78 +1,64 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --font-family: 'Outfit', system-ui, -apple-system, sans-serif;
-  
-  --bg-dark: #0f172a;
-  --bg-panel: #1e293b;
-  --bg-pitch: #064e3b;
-  --pitch-lines: rgba(255, 255, 255, 0.4);
-  
-  --accent-primary: #10b981;
-  --accent-hover: #34d399;
-  
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  
-  --border-color: rgba(255, 255, 255, 0.1);
-  --border-highlight: rgba(16, 185, 129, 0.3);
-  
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
-  --shadow-glow: 0 0 15px rgba(16, 185, 129, 0.3);
-  
-  --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
-  --radius-full: 9999px;
-  
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-spring: 500ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  font-family: 'Outfit', 'Avenir Next', 'Segoe UI', sans-serif;
+  color: #edf1e9;
+  background: #0a0f0c;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  font-kerning: normal;
 }
 
 * {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+}
+
+html {
+  min-width: 320px;
+  background: #0a0f0c;
 }
 
 body {
-  font-family: var(--font-family);
-  background-color: var(--bg-dark);
-  color: var(--text-primary);
+  min-width: 320px;
   min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
 }
 
 button {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  background: none;
-  outline: none;
+  border: 0;
 }
 
-input, select, textarea {
-  font-family: inherit;
-  outline: none;
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #d6ea83;
+  outline-offset: 3px;
 }
 
-/* Custom Scrollbar */
+::selection {
+  color: #102015;
+  background: #d6ea83;
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
 }
+
 ::-webkit-scrollbar-track {
-  background: var(--bg-dark);
+  background: #101711;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-panel);
-  border-radius: var(--radius-full);
+  background: #354238;
+  border: 2px solid #101711;
+  border-radius: 99px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--border-color);
+  background: #607166;
 }
