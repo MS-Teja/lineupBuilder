@@ -38,9 +38,13 @@ const loadPortrait = (url) => {
   if (!url) return Promise.resolve(null);
   if (portraitCache.has(url)) return portraitCache.get(url);
 
+  const isLocalData = url.startsWith('data:') || url.startsWith('blob:');
+
   const promise = new Promise((resolve) => {
     const image = new Image();
-    image.crossOrigin = 'anonymous';
+    if (!isLocalData) {
+      image.crossOrigin = 'anonymous';
+    }
     image.decoding = 'async';
     image.onload = async () => {
       try {
@@ -50,7 +54,17 @@ const loadPortrait = (url) => {
       }
       resolve(image.naturalWidth ? image : null);
     };
-    image.onerror = () => resolve(null);
+    image.onerror = () => {
+      // If anonymous load fails and it wasn't a local data URL, try once without crossOrigin
+      if (!isLocalData) {
+        const fallbackImage = new Image();
+        fallbackImage.onload = () => resolve(fallbackImage.naturalWidth ? fallbackImage : null);
+        fallbackImage.onerror = () => resolve(null);
+        fallbackImage.src = url;
+        return;
+      }
+      resolve(null);
+    };
     image.src = url;
   });
 

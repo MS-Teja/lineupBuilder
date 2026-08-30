@@ -1,24 +1,25 @@
-import { Check, Eye, EyeOff, PencilLine, Search, Trash2, X } from 'lucide-react';
-import { useState } from 'react';
+import { Camera, Check, Eye, EyeOff, Link as LinkIcon, LoaderCircle, PencilLine, Search, Trash2, Upload, X } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { processImageFile } from '../services/playerDirectory';
 import { roleMap } from '../utils/formations';
 
-const initialsFor = (name) =>
+const initialsFor = (name = '') =>
   name
     .split(' ')
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0])
     .join('')
-    .toUpperCase();
+    .toUpperCase() || 'P';
 
 function InspectorPortrait({ player }) {
   const [hasImageError, setHasImageError] = useState(false);
 
-  if (player.photo && !hasImageError) {
+  if (player?.photo && !hasImageError) {
     return <img src={player.photo} alt="" crossOrigin="anonymous" onError={() => setHasImageError(true)} />;
   }
 
-  return <span>{initialsFor(player.name)}</span>;
+  return <span>{initialsFor(player?.name)}</span>;
 }
 
 export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlayer, onUpdatePlayer, onOpenDirectory, onClose }) {
@@ -28,17 +29,63 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
     number: slot.profile?.number ?? '',
     club: slot.profile?.club ?? '',
     country: slot.profile?.country ?? '',
+    position: slot.profile?.position ?? '',
+    photo: slot.profile?.photo ?? null,
   }));
-  const role = roleMap[slot.positionId];
+  const [urlDraft, setUrlDraft] = useState('');
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const role = roleMap[slot.positionId] || { label: 'Player', unit: 'Squad' };
   const player = slot.profile;
 
   const changeDraft = (field, value) => setDraft((current) => ({ ...current, [field]: value }));
+
+  const handlePhotoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessingPhoto(true);
+    setPhotoError(null);
+
+    try {
+      const dataUrl = await processImageFile(file);
+      changeDraft('photo', dataUrl);
+      if (!isEditing && player) {
+        onUpdatePlayer({ ...player, photo: dataUrl });
+      }
+    } catch (err) {
+      setPhotoError(err.message || 'Could not load photo');
+    } finally {
+      setIsProcessingPhoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleApplyUrl = () => {
+    if (!urlDraft.trim()) return;
+    const nextUrl = urlDraft.trim();
+    changeDraft('photo', nextUrl);
+    if (!isEditing && player) {
+      onUpdatePlayer({ ...player, photo: nextUrl });
+    }
+    setUrlDraft('');
+  };
+
+  const handleRemovePhoto = () => {
+    changeDraft('photo', null);
+    if (!isEditing && player) {
+      onUpdatePlayer({ ...player, photo: null });
+    }
+  };
+
   const saveDraft = (event) => {
     event.preventDefault();
     onUpdatePlayer({
       ...player,
       ...draft,
-      number: draft.number === '' ? null : Number(draft.number),
+      number: draft.number === '' || draft.number === null ? null : Number(draft.number),
     });
     setIsEditing(false);
   };
@@ -73,7 +120,26 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
       ) : (
         <>
           <div className="inspector-player">
-            <div className="inspector-portrait"><InspectorPortrait key={player.id ?? `${player.name}-${player.photo ?? ''}`} player={player} /></div>
+            <div className="inspector-portrait-wrap">
+              <div className="inspector-portrait">
+                <InspectorPortrait key={player.id ?? `${player.name}-${player.photo ?? ''}`} player={isEditing ? draft : player} />
+              </div>
+              <label
+                htmlFor={`inspector-photo-input-${slot.id}`}
+                className="inspector-quick-photo-btn"
+                title="Upload or change photo"
+              >
+                {isProcessingPhoto ? <LoaderCircle size={12} className="is-spinning" /> : <Camera size={12} />}
+              </label>
+              <input
+                type="file"
+                id={`inspector-photo-input-${slot.id}`}
+                ref={fileInputRef}
+                onChange={handlePhotoUpload}
+                accept="image/png, image/jpeg, image/webp, image/gif, image/svg+xml"
+                className="hidden-file-input"
+              />
+            </div>
             <div>
               <h3>{player.name}</h3>
               <p>{player.position || role.label}</p>
@@ -103,6 +169,47 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
 
           {isEditing && (
             <form className="player-edit-form" onSubmit={saveDraft}>
+              <div className="inspector-photo-edit-section">
+                <span className="field-label">Photo</span>
+                <div className="photo-edit-actions">
+                  <label htmlFor={`inspector-form-upload-${slot.id}`} className="mini-upload-btn">
+                    {isProcessingPhoto ? <LoaderCircle size={13} className="is-spinning" /> : <Upload size={13} />}
+                    <span>{draft.photo ? 'Replace photo' : 'Upload photo'}</span>
+                  </label>
+                  <input
+                    type="file"
+                    id={`inspector-form-upload-${slot.id}`}
+                    onChange={handlePhotoUpload}
+                    accept="image/png, image/jpeg, image/webp, image/gif, image/svg+xml"
+                    className="hidden-file-input"
+                  />
+                  {draft.photo && (
+                    <button type="button" className="mini-remove-btn" onClick={handleRemovePhoto}>
+                      <X size={13} /> Remove
+                    </button>
+                  )}
+                </div>
+
+                <div className="mini-url-row">
+                  <LinkIcon size={12} />
+                  <input
+                    type="url"
+                    value={urlDraft}
+                    onChange={(e) => setUrlDraft(e.target.value)}
+                    placeholder="Or paste photo URL…"
+                  />
+                  <button
+                    type="button"
+                    className="mini-apply-btn"
+                    onClick={handleApplyUrl}
+                    disabled={!urlDraft.trim()}
+                  >
+                    Apply
+                  </button>
+                </div>
+                {photoError && <span className="photo-error-text">{photoError}</span>}
+              </div>
+
               <label>
                 <span>Name</span>
                 <input value={draft.name} onChange={(event) => changeDraft('name', event.target.value)} required />
@@ -110,6 +217,10 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
               <label>
                 <span>Shirt no.</span>
                 <input type="number" min="0" max="99" value={draft.number} onChange={(event) => changeDraft('number', event.target.value)} />
+              </label>
+              <label>
+                <span>Position</span>
+                <input value={draft.position} onChange={(event) => changeDraft('position', event.target.value)} />
               </label>
               <label>
                 <span>Club</span>
