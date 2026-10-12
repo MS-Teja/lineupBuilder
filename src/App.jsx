@@ -1,4 +1,4 @@
-import { Download, FileVideo, Film, LayoutPanelTop, UserRound, X } from 'lucide-react';
+import { Download, FileVideo, Film, LayoutPanelTop, Trash2, UserRound, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import FormationPanel from './components/FormationPanel';
 import MotionTimeline from './components/MotionTimeline';
@@ -317,6 +317,22 @@ function App() {
     removalTimers.current.push(timer);
   };
 
+  const clearAllPlayers = () => {
+    const filledSlots = slots.filter((slot) => slot.profile && !slot.isRemoving);
+    if (!filledSlots.length) return;
+
+    const snapshot = slots.map((slot) => ({ ...slot }));
+
+    setSlots((current) => current.map((slot) =>
+      slot.profile ? emptySlot(slot.id, slot.positionId, slot.motionKey + 1) : slot
+    ));
+    setIsDirectoryOpen(false);
+
+    announce(`${filledSlots.length} player${filledSlots.length > 1 ? 's' : ''} cleared from the XI.`, () => {
+      setSlots(snapshot.map((slot) => ({ ...slot, motionKey: slot.motionKey + 2 })));
+    });
+  };
+
   const openPlayerSearch = () => {
     const vacantSlot = slots.find((slot) => !slot.profile);
     const target = vacantSlot ?? selectedSlot;
@@ -496,6 +512,16 @@ function App() {
           >
             <Film size={16} />
             <span>Motion</span>
+          </button>
+          <button
+            type="button"
+            className="toolbar-button toolbar-clear"
+            onClick={clearAllPlayers}
+            disabled={!slots.some((s) => s.profile)}
+            aria-label="Clear all players"
+          >
+            <Trash2 size={16} />
+            <span>Clear XI</span>
           </button>
         </div>
 

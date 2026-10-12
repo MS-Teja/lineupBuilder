@@ -3355,6 +3355,17 @@
 
 .toolbar-button:active { transform: scale(0.97); }
 
+.toolbar-clear:hover:not(:disabled) {
+  color: #e06c75;
+  background: rgba(224, 108, 117, 0.08);
+  border-color: rgba(224, 108, 117, 0.25);
+}
+
+.toolbar-clear:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .export-button {
   min-width: 8.3rem;
   min-height: 2.3rem;
