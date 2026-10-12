@@ -55,12 +55,14 @@ const loadPortrait = (url) => {
       resolve(image.naturalWidth ? image : null);
     };
     image.onerror = () => {
-      // If anonymous load fails and it wasn't a local data URL, try once without crossOrigin
+      // If anonymous load fails and it wasn't a local data URL, try via CORS-friendly wsrv proxy with anonymous crossOrigin
       if (!isLocalData) {
-        const fallbackImage = new Image();
-        fallbackImage.onload = () => resolve(fallbackImage.naturalWidth ? fallbackImage : null);
-        fallbackImage.onerror = () => resolve(null);
-        fallbackImage.src = url;
+        const proxyImage = new Image();
+        proxyImage.crossOrigin = 'anonymous';
+        proxyImage.decoding = 'async';
+        proxyImage.onload = () => resolve(proxyImage.naturalWidth ? proxyImage : null);
+        proxyImage.onerror = () => resolve(null);
+        proxyImage.src = `https://wsrv.nl/?url=${encodeURIComponent(url)}&output=webp`;
         return;
       }
       resolve(null);

@@ -1,6 +1,6 @@
 import { ArrowUpRight, Check, Database, ImagePlus, Link as LinkIcon, LoaderCircle, Search, Sparkles, Upload, UserRoundPlus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { createManualPlayer, processImageFile, searchPlayerDirectory } from '../services/playerDirectory';
+import { createManualPlayer, processImageFile, processImageUrl, searchPlayerDirectory } from '../services/playerDirectory';
 import { roleMap } from '../utils/formations';
 
 const initialsFor = (name = '') =>
@@ -14,9 +14,27 @@ const initialsFor = (name = '') =>
 
 function SearchPortrait({ player }) {
   const [error, setError] = useState(false);
+  const [triedFallback, setTriedFallback] = useState(false);
 
   if (player.photo && !error) {
-    return <img src={player.photo} alt="" crossOrigin="anonymous" onError={() => setError(true)} />;
+    const isData = player.photo.startsWith('data:') || player.photo.startsWith('blob:');
+    const src = triedFallback && !isData
+      ? `https://wsrv.nl/?url=${encodeURIComponent(player.photo)}&output=webp`
+      : player.photo;
+
+    return (
+      <img
+        src={src}
+        alt=""
+        onError={() => {
+          if (!triedFallback && !isData) {
+            setTriedFallback(true);
+          } else {
+            setError(true);
+          }
+        }}
+      />
+    );
   }
 
   return <span>{initialsFor(player.name)}</span>;
@@ -95,15 +113,41 @@ export default function PlayerDirectory({ targetSlot, onAssignPlayer, onClose })
     }
   };
 
-  const applyUrlPhoto = () => {
-    if (!urlInput.trim()) return;
-    setCustomDraft((curr) => ({ ...curr, photo: urlInput.trim() }));
-    setUrlInput('');
+  const applyUrlPhoto = async () => {
+    const raw = urlInput.trim();
+    if (!raw) return;
+
+    setIsProcessingPhoto(true);
+    setUploadError(null);
+
+    try {
+      const dataUrl = await processImageUrl(raw);
+      setCustomDraft((curr) => ({ ...curr, photo: dataUrl }));
+      setUrlInput('');
+    } catch (err) {
+      setUploadError(err.message || 'Could not load the image from URL.');
+    } finally {
+      setIsProcessingPhoto(false);
+    }
   };
 
-  const handleCustomSubmit = (e) => {
+  const handleCustomSubmit = async (e) => {
     e.preventDefault();
     if (!customDraft.name.trim()) return;
+
+    let photoToUse = customDraft.photo;
+    if (!photoToUse && urlInput.trim()) {
+      setIsProcessingPhoto(true);
+      setUploadError(null);
+      try {
+        photoToUse = await processImageUrl(urlInput.trim());
+      } catch (err) {
+        setUploadError(err.message || 'Could not load photo from URL.');
+        setIsProcessingPhoto(false);
+        return;
+      }
+      setIsProcessingPhoto(false);
+    }
 
     const player = createManualPlayer({
       name: customDraft.name,
@@ -111,7 +155,7 @@ export default function PlayerDirectory({ targetSlot, onAssignPlayer, onClose })
       club: customDraft.club || 'Custom club',
       country: customDraft.country || 'Custom country',
       position: customDraft.position || role.label,
-      photo: customDraft.photo,
+      photo: photoToUse,
     });
 
     selectPlayer(player);
@@ -293,16 +337,22 @@ export default function PlayerDirectory({ targetSlot, onAssignPlayer, onClose })
                 type="url"
                 value={urlInput}
                 onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="Or paste image URL…"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyUrlPhoto();
+                  }
+                }}
+                placeholder="Or paste image URL (JPG, PNG, WebP)…"
               />
             </div>
             <button
               type="button"
               className="apply-url-btn"
               onClick={applyUrlPhoto}
-              disabled={!urlInput.trim()}
+              disabled={!urlInput.trim() || isProcessingPhoto}
             >
-              Apply
+              {isProcessingPhoto ? <LoaderCircle size={13} className="is-spinning" /> : 'Apply'}
             </button>
           </div>
 

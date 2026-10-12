@@ -3097,10 +3097,12 @@
 }
 
 .player-token {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 4.8rem;
+  justify-content: center;
+  width: auto;
   min-height: 0;
   padding: 0;
   color: var(--chalk);
@@ -3155,12 +3157,18 @@
 }
 
 .player-details {
+  position: absolute;
+  top: calc(100% + 0.38rem);
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
-  margin-top: 0.38rem;
-  max-width: 6.5rem;
+  margin-top: 0;
+  max-width: 8rem;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .player-details-number {
@@ -3485,7 +3493,7 @@
 }
 
 .pitch-artboard.is-landscape .player-token {
-  width: clamp(4.6rem, 9cqw, 6.6rem);
+  width: auto;
 }
 
 .pitch-artboard.is-landscape .player-circle {
@@ -3495,7 +3503,8 @@
 
 .pitch-artboard.is-landscape .player-details {
   max-width: 8rem;
-  margin-top: 0.45rem;
+  top: calc(100% + 0.42rem);
+  margin-top: 0;
 }
 
 .pitch-artboard.is-landscape .player-details-number {

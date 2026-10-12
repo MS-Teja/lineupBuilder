@@ -5,9 +5,27 @@ const labelFor = (name) => name.split(' ').filter(Boolean).at(-1) || name;
 
 function Portrait({ player }) {
   const [hasImageError, setHasImageError] = useState(false);
+  const [triedFallback, setTriedFallback] = useState(false);
 
   if (player.photo && !hasImageError) {
-    return <img src={player.photo} alt="" crossOrigin="anonymous" onError={() => setHasImageError(true)} />;
+    const isData = player.photo.startsWith('data:') || player.photo.startsWith('blob:');
+    const src = triedFallback && !isData
+      ? `https://wsrv.nl/?url=${encodeURIComponent(player.photo)}&output=webp`
+      : player.photo;
+
+    return (
+      <img
+        src={src}
+        alt=""
+        onError={() => {
+          if (!triedFallback && !isData) {
+            setTriedFallback(true);
+          } else {
+            setHasImageError(true);
+          }
+        }}
+      />
+    );
   }
 
   return null;

@@ -53,6 +53,28 @@ const requestJson = async (url, signal) => {
   return response.json();
 };
 
+const imageElementToDataUrl = (img, maxSize = 400) => {
+  const canvas = document.createElement('canvas');
+  const sourceWidth = img.naturalWidth || img.width;
+  const sourceHeight = img.naturalHeight || img.height;
+  const targetDimension = Math.min(maxSize, Math.max(sourceWidth, sourceHeight));
+
+  canvas.width = targetDimension;
+  canvas.height = targetDimension;
+
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  // Crop into a centered square cover
+  const minSide = Math.min(sourceWidth, sourceHeight);
+  const startX = (sourceWidth - minSide) / 2;
+  const startY = (sourceHeight - minSide) / 2;
+
+  ctx.drawImage(img, startX, startY, minSide, minSide, 0, 0, targetDimension, targetDimension);
+  return canvas.toDataURL('image/png');
+};
+
 /**
  * Optimizes an uploaded image file into a clean square base64 data URL.
  * Resizes down to maxSize (default 400x400) to keep memory footprint light
@@ -71,32 +93,64 @@ export const processImageFile = (file, maxSize = 400) =>
       const img = new Image();
       img.onerror = () => reject(new Error('Could not parse image data.'));
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const sourceWidth = img.naturalWidth || img.width;
-        const sourceHeight = img.naturalHeight || img.height;
-        const targetDimension = Math.min(maxSize, Math.max(sourceWidth, sourceHeight));
-
-        canvas.width = targetDimension;
-        canvas.height = targetDimension;
-
-        const ctx = canvas.getContext('2d');
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-
-        // Crop into a centered square cover
-        const minSide = Math.min(sourceWidth, sourceHeight);
-        const startX = (sourceWidth - minSide) / 2;
-        const startY = (sourceHeight - minSide) / 2;
-
-        ctx.drawImage(img, startX, startY, minSide, minSide, 0, 0, targetDimension, targetDimension);
-
-        const dataUrl = canvas.toDataURL('image/png');
-        resolve(dataUrl);
+        try {
+          resolve(imageElementToDataUrl(img, maxSize));
+        } catch {
+          reject(new Error('Could not process image file.'));
+        }
       };
       img.src = reader.result;
     };
     reader.readAsDataURL(file);
   });
+
+/**
+ * Loads an external image URL, resolving CORS restrictions via a reliable proxy
+ * if direct access fails, and converts it into a clean square base64 data URL.
+ * Ensures the photo renders in preview and never taints export canvases.
+ */
+export const processImageUrl = async (rawUrl, maxSize = 400) => {
+  const url = (rawUrl || '').trim();
+  if (!url) {
+    throw new Error('Please enter an image URL.');
+  }
+
+  if (url.startsWith('data:image/')) {
+    return url;
+  }
+
+  const tryLoadImage = (src) =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.decoding = 'async';
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Failed to load image from source'));
+      img.src = src;
+    });
+
+  // 1. Try direct anonymous load
+  try {
+    const directImg = await tryLoadImage(url);
+    return imageElementToDataUrl(directImg, maxSize);
+  } catch {
+    // 2. Direct anonymous load failed (CORS/hotlinking). Try via wsrv.nl proxy.
+    try {
+      const proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(url)}&output=webp`;
+      const proxyImg = await tryLoadImage(proxyUrl);
+      return imageElementToDataUrl(proxyImg, maxSize);
+    } catch {
+      // 3. Fallback to allorigins raw proxy
+      try {
+        const fallbackProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+        const fallbackImg = await tryLoadImage(fallbackProxyUrl);
+        return imageElementToDataUrl(fallbackImg, maxSize);
+      } catch {
+        throw new Error('Could not load image from this URL. Make sure it is a direct image link (PNG, JPG, WebP) or upload a photo file.');
+      }
+    }
+  }
+};
 
 /**
  * Search TheSportsDB for official footballer cutouts and profiles.

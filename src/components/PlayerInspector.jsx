@@ -1,6 +1,6 @@
 import { Camera, Check, Eye, EyeOff, Link as LinkIcon, LoaderCircle, PencilLine, Search, Trash2, Upload, X } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { processImageFile } from '../services/playerDirectory';
+import { processImageFile, processImageUrl } from '../services/playerDirectory';
 import { roleMap } from '../utils/formations';
 
 const initialsFor = (name = '') =>
@@ -14,9 +14,27 @@ const initialsFor = (name = '') =>
 
 function InspectorPortrait({ player }) {
   const [hasImageError, setHasImageError] = useState(false);
+  const [triedFallback, setTriedFallback] = useState(false);
 
   if (player?.photo && !hasImageError) {
-    return <img src={player.photo} alt="" crossOrigin="anonymous" onError={() => setHasImageError(true)} />;
+    const isData = player.photo.startsWith('data:') || player.photo.startsWith('blob:');
+    const src = triedFallback && !isData
+      ? `https://wsrv.nl/?url=${encodeURIComponent(player.photo)}&output=webp`
+      : player.photo;
+
+    return (
+      <img
+        src={src}
+        alt=""
+        onError={() => {
+          if (!triedFallback && !isData) {
+            setTriedFallback(true);
+          } else {
+            setHasImageError(true);
+          }
+        }}
+      />
+    );
   }
 
   return <span>{initialsFor(player?.name)}</span>;
@@ -63,14 +81,24 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
     }
   };
 
-  const handleApplyUrl = () => {
+  const handleApplyUrl = async () => {
     if (!urlDraft.trim()) return;
-    const nextUrl = urlDraft.trim();
-    changeDraft('photo', nextUrl);
-    if (!isEditing && player) {
-      onUpdatePlayer({ ...player, photo: nextUrl });
+    const raw = urlDraft.trim();
+    setIsProcessingPhoto(true);
+    setPhotoError(null);
+
+    try {
+      const dataUrl = await processImageUrl(raw);
+      changeDraft('photo', dataUrl);
+      if (!isEditing && player) {
+        onUpdatePlayer({ ...player, photo: dataUrl });
+      }
+      setUrlDraft('');
+    } catch (err) {
+      setPhotoError(err.message || 'Could not load photo from URL');
+    } finally {
+      setIsProcessingPhoto(false);
     }
-    setUrlDraft('');
   };
 
   const handleRemovePhoto = () => {
@@ -80,11 +108,27 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
     }
   };
 
-  const saveDraft = (event) => {
+  const saveDraft = async (event) => {
     event.preventDefault();
+
+    let photoToSave = draft.photo;
+    if (!photoToSave && urlDraft.trim()) {
+      setIsProcessingPhoto(true);
+      setPhotoError(null);
+      try {
+        photoToSave = await processImageUrl(urlDraft.trim());
+      } catch (err) {
+        setPhotoError(err.message || 'Could not load photo from URL');
+        setIsProcessingPhoto(false);
+        return;
+      }
+      setIsProcessingPhoto(false);
+    }
+
     onUpdatePlayer({
       ...player,
       ...draft,
+      photo: photoToSave,
       number: draft.number === '' || draft.number === null ? null : Number(draft.number),
     });
     setIsEditing(false);
@@ -196,15 +240,21 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
                     type="url"
                     value={urlDraft}
                     onChange={(e) => setUrlDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleApplyUrl();
+                      }
+                    }}
                     placeholder="Or paste photo URL…"
                   />
                   <button
                     type="button"
                     className="mini-apply-btn"
                     onClick={handleApplyUrl}
-                    disabled={!urlDraft.trim()}
+                    disabled={!urlDraft.trim() || isProcessingPhoto}
                   >
-                    Apply
+                    {isProcessingPhoto ? <LoaderCircle size={11} className="is-spinning" /> : 'Apply'}
                   </button>
                 </div>
                 {photoError && <span className="photo-error-text">{photoError}</span>}

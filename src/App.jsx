@@ -55,12 +55,13 @@ const materializeExportScene = (baseSlots, scene, orientation) => {
       return {
         ...slot,
         positionId: state?.positionId ?? slot.positionId,
-        profile: state ? (state.profile ? { ...state.profile } : null) : slot.profile,
-        accent: state?.accent ?? slot.accent,
-        isRevealed: state?.isRevealed ?? slot.isRevealed,
+        // The current slot profile (with updated photo, name, shirt number) is always the single source of truth
+        profile: slot.profile ? { ...slot.profile } : null,
+        accent: slot.accent,
+        isRevealed: state ? state.isRevealed : slot.isRevealed,
         isRemoving: false,
-        customX: state?.customX ?? slot.customX ?? null,
-        customY: state?.customY ?? slot.customY ?? null,
+        customX: state?.customX !== undefined && state?.customX !== null ? state.customX : (slot.customX ?? null),
+        customY: state?.customY !== undefined && state?.customY !== null ? state.customY : (slot.customY ?? null),
       };
     }),
   };
@@ -148,13 +149,13 @@ function App() {
     setSlots((current) => current.map((slot) => {
       const next = bySlotId.get(slot.id);
       if (!next) return slot;
-      const hasProfile = Boolean(next.profile);
+      const hasProfile = Boolean(slot.profile || next.profile);
       const isEntering = hasProfile && !slot.isRevealed && next.isRevealed;
       return {
         ...slot,
         positionId: next.positionId,
-        profile: next.profile ? { ...next.profile } : null,
-        accent: next.accent ?? slot.accent,
+        profile: slot.profile ?? (next.profile ? { ...next.profile } : null),
+        accent: slot.accent ?? next.accent,
         isRevealed: next.isRevealed,
         isRemoving: false,
         motionKey: isEntering ? slot.motionKey + 1 : slot.motionKey,
@@ -389,10 +390,23 @@ function App() {
     playbackToken.current = token;
     setIsPlaying(true);
 
+    const effectiveKeyframes = (keyframes.length === 2 && keyframes[0].id === 'cue-opening' && keyframes[1].id === 'cue-full-xi')
+      ? [
+          {
+            ...keyframes[0],
+            scene: makeScene(slots.map((s) => ({ ...s, isRevealed: false })), formationId, isCustomShape, customFormationInput),
+          },
+          {
+            ...keyframes[1],
+            scene: makeScene(slots, formationId, isCustomShape, customFormationInput),
+          },
+        ]
+      : keyframes;
+
     try {
-      for (let index = 0; index < keyframes.length; index += 1) {
+      for (let index = 0; index < effectiveKeyframes.length; index += 1) {
         if (playbackToken.current !== token) return;
-        const keyframe = keyframes[index];
+        const keyframe = effectiveKeyframes[index];
         if (index === 0) setMotionOverride({ ...motion, formationTransition: 'cut', formationDuration: 1 });
         else setMotionOverride(null);
         applyScene(keyframe.scene);
@@ -436,7 +450,20 @@ function App() {
     const stem = fileStem(formation, orientation);
     setExportState({ format, progress: 0 });
 
-    const frames = keyframes.map((keyframe) => ({
+    const effectiveKeyframes = (keyframes.length === 2 && keyframes[0].id === 'cue-opening' && keyframes[1].id === 'cue-full-xi')
+      ? [
+          {
+            ...keyframes[0],
+            scene: makeScene(slots.map((s) => ({ ...s, isRevealed: false })), formationId, isCustomShape, customFormationInput),
+          },
+          {
+            ...keyframes[1],
+            scene: makeScene(slots, formationId, isCustomShape, customFormationInput),
+          },
+        ]
+      : keyframes;
+
+    const frames = effectiveKeyframes.map((keyframe) => ({
       ...keyframe,
       scene: materializeExportScene(slots, keyframe.scene, orientation),
     }));
