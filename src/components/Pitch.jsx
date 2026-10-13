@@ -154,7 +154,7 @@ export default function Pitch({
               <div
                 key={`drop-${slot.id}`}
                 className="drop-target"
-                style={{ '--x': `${coordinates.x}cqw`, '--y': `${coordinates.y}cqh` }}
+                style={{ '--x': `${coordinates.x}%`, '--y': `${coordinates.y}%` }}
                 aria-hidden="true"
               >
                 <span>{role.label}</span>

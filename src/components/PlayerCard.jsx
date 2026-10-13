@@ -44,8 +44,8 @@ export default function PlayerCard({
   const isEmpty = !slot.profile;
   const isConcealed = !isEmpty && !slot.isRevealed;
   const style = {
-    '--x': `${coordinates.x}cqw`,
-    '--y': `${coordinates.y}cqh`,
+    '--x': `${coordinates.x}%`,
+    '--y': `${coordinates.y}%`,
     '--player-accent': slot.accent,
   };
 

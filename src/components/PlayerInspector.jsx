@@ -55,6 +55,8 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
   const [photoError, setPhotoError] = useState(null);
   const fileInputRef = useRef(null);
 
+  const [showQuickUrl, setShowQuickUrl] = useState(false);
+
   const role = roleMap[slot.positionId] || { label: 'Player', unit: 'Squad' };
   const player = slot.profile;
 
@@ -70,8 +72,8 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
     try {
       const dataUrl = await processImageFile(file);
       changeDraft('photo', dataUrl);
-      if (!isEditing && player) {
-        onUpdatePlayer({ ...player, photo: dataUrl });
+      if (player) {
+        onUpdatePlayer({ ...player, ...draft, photo: dataUrl });
       }
     } catch (err) {
       setPhotoError(err.message || 'Could not load photo');
@@ -90,10 +92,11 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
     try {
       const dataUrl = await processImageUrl(raw);
       changeDraft('photo', dataUrl);
-      if (!isEditing && player) {
-        onUpdatePlayer({ ...player, photo: dataUrl });
+      if (player) {
+        onUpdatePlayer({ ...player, ...draft, photo: dataUrl });
       }
       setUrlDraft('');
+      setShowQuickUrl(false);
     } catch (err) {
       setPhotoError(err.message || 'Could not load photo from URL');
     } finally {
@@ -103,8 +106,8 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
 
   const handleRemovePhoto = () => {
     changeDraft('photo', null);
-    if (!isEditing && player) {
-      onUpdatePlayer({ ...player, photo: null });
+    if (player) {
+      onUpdatePlayer({ ...player, ...draft, photo: null });
     }
   };
 
@@ -168,13 +171,24 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
               <div className="inspector-portrait">
                 <InspectorPortrait key={player.id ?? `${player.name}-${player.photo ?? ''}`} player={isEditing ? draft : player} />
               </div>
-              <label
-                htmlFor={`inspector-photo-input-${slot.id}`}
-                className="inspector-quick-photo-btn"
-                title="Upload or change photo"
-              >
-                {isProcessingPhoto ? <LoaderCircle size={12} className="is-spinning" /> : <Camera size={12} />}
-              </label>
+              <div className="inspector-portrait-actions">
+                <label
+                  htmlFor={`inspector-photo-input-${slot.id}`}
+                  className="inspector-quick-photo-btn"
+                  title="Upload photo file"
+                >
+                  {isProcessingPhoto ? <LoaderCircle size={12} className="is-spinning" /> : <Camera size={12} />}
+                </label>
+                <button
+                  type="button"
+                  className={`inspector-quick-photo-btn ${showQuickUrl ? 'is-active' : ''}`}
+                  onClick={() => setShowQuickUrl((v) => !v)}
+                  title="Paste photo URL"
+                  aria-label="Paste photo URL"
+                >
+                  <LinkIcon size={12} />
+                </button>
+              </div>
               <input
                 type="file"
                 id={`inspector-photo-input-${slot.id}`}
@@ -195,6 +209,36 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
             </div>
             <strong className="inspector-number">{player.number ?? '—'}</strong>
           </div>
+
+          {showQuickUrl && !isEditing && (
+            <div className="quick-url-banner">
+              <div className="mini-url-row">
+                <LinkIcon size={12} />
+                <input
+                  type="url"
+                  value={urlDraft}
+                  onChange={(e) => setUrlDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleApplyUrl();
+                    }
+                  }}
+                  placeholder="Paste direct image URL…"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  className="mini-apply-btn"
+                  onClick={handleApplyUrl}
+                  disabled={!urlDraft.trim() || isProcessingPhoto}
+                >
+                  {isProcessingPhoto ? <LoaderCircle size={11} className="is-spinning" /> : 'Apply'}
+                </button>
+              </div>
+              {photoError && <span className="photo-error-text">{photoError}</span>}
+            </div>
+          )}
 
           <div className="inspector-actions">
             <button type="button" className={slot.isRevealed ? 'is-on' : ''} onClick={() => onToggleVisibility(slot.id)}>

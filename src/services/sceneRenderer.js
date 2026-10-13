@@ -257,8 +257,9 @@ const drawCover = (context, image, x, y, size) => {
     width = size * sourceRatio;
     drawX -= (width - size) / 2;
   } else {
+    // Tall photos are anchored to the top (like CSS object-position: 50% 0)
+    // so the face stays in frame, matching the live pitch token.
     height = size / sourceRatio;
-    drawY -= (height - size) / 2;
   }
 
   context.drawImage(image, drawX, drawY, width, height);

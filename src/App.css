@@ -1000,16 +1000,15 @@
 .player-pin,
 .drop-target {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 1px;
-  height: 1px;
-  transform: translate3d(var(--x), var(--y), 0);
+  left: var(--x);
+  top: var(--y);
+  width: 0;
+  height: 0;
 }
 
 .player-pin {
   z-index: 4;
-  transition: transform 520ms var(--ease-out);
+  transition: left 520ms var(--ease-out), top 520ms var(--ease-out);
   transition-delay: calc(var(--phase) * 58ms);
 }
 
@@ -1281,7 +1280,7 @@
   border-radius: 50%;
   background: rgba(214, 234, 131, 0.15);
   box-shadow: 0 0 0 0.3rem rgba(214, 234, 131, 0.08);
-  transform: translate(calc(var(--x) - 50%), calc(var(--y) - 50%));
+  transform: translate(-50%, -50%);
   animation: target-in 200ms var(--ease-out) both;
   pointer-events: none;
 }
@@ -1302,8 +1301,8 @@
 }
 
 @keyframes target-in {
-  from { opacity: 0; transform: translate(calc(var(--x) - 50%), calc(var(--y) - 50%)) scale(0.72); }
-  to { opacity: 1; transform: translate(calc(var(--x) - 50%), calc(var(--y) - 50%)) scale(1); }
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.72); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
 .drag-instruction {
@@ -2122,14 +2121,21 @@
   flex: 0 0 auto;
 }
 
-.inspector-quick-photo-btn {
+.inspector-portrait-actions {
   position: absolute;
-  right: -0.2rem;
-  bottom: -0.2rem;
+  right: -0.35rem;
+  bottom: -0.25rem;
+  display: flex;
+  gap: 0.25rem;
+  z-index: 2;
+}
+
+.inspector-quick-photo-btn {
   display: grid;
   place-items: center;
-  width: 1.45rem;
-  height: 1.45rem;
+  width: 1.4rem;
+  height: 1.4rem;
+  padding: 0;
   color: #102014;
   background: var(--acid);
   border-radius: 50%;
@@ -2142,6 +2148,21 @@
 .inspector-quick-photo-btn:hover {
   transform: scale(1.12);
   background: #fff;
+}
+
+.inspector-quick-photo-btn.is-active {
+  background: #fff;
+  border-color: var(--acid);
+}
+
+.quick-url-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.5rem 0.65rem;
+  background: rgba(18, 28, 20, 0.7);
+  border: 1px solid rgba(214, 234, 131, 0.25);
+  margin-bottom: 0.55rem;
 }
 
 .inspector-photo-edit-section {
@@ -3132,10 +3153,16 @@
   transition: transform 180ms var(--ease-out), border-color 180ms var(--ease-out), box-shadow 180ms var(--ease-out), background-color 180ms var(--ease-out);
 }
 
+/* Portrait photos are top-anchored so faces stay in frame; the export
+   renderer (sceneRenderer drawCover) mirrors this crop exactly. */
 .player-circle img {
+  position: absolute;
+  inset: 0;
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: 50% 0%;
 }
 
 .player-number {

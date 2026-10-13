@@ -110,13 +110,39 @@ export const processImageFile = (file, maxSize = 400) =>
  * Ensures the photo renders in preview and never taints export canvases.
  */
 export const processImageUrl = async (rawUrl, maxSize = 400) => {
-  const url = (rawUrl || '').trim();
+  let url = (rawUrl || '').trim();
   if (!url) {
     throw new Error('Please enter an image URL.');
   }
 
-  if (url.startsWith('data:image/')) {
+  if (url.startsWith('data:image/') || url.startsWith('blob:')) {
     return url;
+  }
+
+  // Handle scheme-relative or protocol-less URLs
+  if (url.startsWith('//')) {
+    url = `https:${url}`;
+  } else if (!/^https?:\/\//i.test(url)) {
+    url = `https://${url}`;
+  }
+
+  // If user pasted a Wikimedia/Wikipedia File page, resolve to the direct image URL
+  const wikiFileMatch = url.match(/wikipedia\.org\/wiki\/File:(.+)$|wikimedia\.org\/wiki\/File:(.+)$/i);
+  if (wikiFileMatch) {
+    const fileName = decodeURIComponent(wikiFileMatch[1] || wikiFileMatch[2]);
+    try {
+      const apiUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=File:${encodeURIComponent(fileName)}&prop=imageinfo&iiprop=url&format=json&origin=*`;
+      const res = await fetch(apiUrl);
+      if (res.ok) {
+        const json = await res.json();
+        const pages = json.query?.pages || {};
+        const firstPage = Object.values(pages)[0];
+        const directUrl = firstPage?.imageinfo?.[0]?.url;
+        if (directUrl) url = directUrl;
+      }
+    } catch {
+      // Proceed with original URL if resolution fails
+    }
   }
 
   const tryLoadImage = (src) =>
@@ -129,6 +155,22 @@ export const processImageUrl = async (rawUrl, maxSize = 400) => {
       img.src = src;
     });
 
+  const tryFetchBlob = async (fetchUrl) => {
+    const response = await fetch(fetchUrl);
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+    const blob = await response.blob();
+    if (!blob.type.startsWith('image/')) {
+      throw new Error('The URL is a webpage, not an image. Right-click the image and choose "Copy Image Address", or upload the photo file.');
+    }
+    const blobUrl = URL.createObjectURL(blob);
+    try {
+      const img = await tryLoadImage(blobUrl);
+      return imageElementToDataUrl(img, maxSize);
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
+  };
+
   // 1. Try direct anonymous load
   try {
     const directImg = await tryLoadImage(url);
@@ -140,13 +182,18 @@ export const processImageUrl = async (rawUrl, maxSize = 400) => {
       const proxyImg = await tryLoadImage(proxyUrl);
       return imageElementToDataUrl(proxyImg, maxSize);
     } catch {
-      // 3. Fallback to allorigins raw proxy
+      // 3. Try fetching blob via wsrv proxy
       try {
-        const fallbackProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-        const fallbackImg = await tryLoadImage(fallbackProxyUrl);
-        return imageElementToDataUrl(fallbackImg, maxSize);
+        const proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(url)}&output=webp`;
+        return await tryFetchBlob(proxyUrl);
       } catch {
-        throw new Error('Could not load image from this URL. Make sure it is a direct image link (PNG, JPG, WebP) or upload a photo file.');
+        // 4. Fallback to allorigins raw proxy
+        try {
+          const fallbackProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+          return await tryFetchBlob(fallbackProxyUrl);
+        } catch {
+          throw new Error('Could not load image from this URL. Make sure it is a direct image link (PNG, JPG, WebP) or upload a photo file.');
+        }
       }
     }
   }
