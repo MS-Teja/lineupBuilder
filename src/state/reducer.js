@@ -178,7 +178,7 @@ export function projectReducer(state, action) {
     case 'addScene': {
       const source = activeScene(state, action);
       const index = state.scenes.indexOf(source);
-      const scene = { ...source, id: action.id, label: `Scene ${state.scenes.length + 1}`, duration: 900 };
+      const scene = { ...source, id: action.id, label: `Scene ${state.scenes.length + 1}`, duration: 900, transition: { ...source.transition } };
       return { ...state, scenes: [...state.scenes.slice(0, index + 1), scene, ...state.scenes.slice(index + 1)] };
     }
 
@@ -192,6 +192,9 @@ export function projectReducer(state, action) {
       scenes.splice(action.to, 0, moved);
       return { ...state, scenes };
     }
+
+    case 'setAllTransitions':
+      return { ...state, scenes: state.scenes.map((scene) => ({ ...scene, transition: { ...action.transition } })) };
 
     case 'updateScene':
       return mapScenes(state, [action.id], (scene) => ({ ...scene, ...action.patch }));

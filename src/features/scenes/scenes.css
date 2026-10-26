@@ -1,6 +1,6 @@
 .scene-strip {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   height: var(--strip-h);
   border-top: 1px solid var(--line);
   background: var(--surface);
@@ -44,19 +44,58 @@
   overflow-y: hidden;
 }
 
-.strip-progress {
-  position: sticky;
-  left: 0;
-  height: 2px;
+/* ── Ruler: scenes and transitions to scale, scrubbable ─────────────── */
+.ruler {
+  position: relative;
+  height: 14px;
   margin: 8px 12px 0;
-  border-radius: 2px;
-  background: var(--line);
+  border-radius: 4px;
+  background: var(--sunken);
+  cursor: ew-resize;
+  touch-action: none;
 }
 
-.strip-progress span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
+.ruler-hold,
+.ruler-transition {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+}
+
+.ruler-hold {
+  border-radius: 2px;
+  background: var(--raised-hover);
+  box-shadow: 1px 0 0 var(--sunken), -1px 0 0 var(--sunken);
+}
+
+.ruler-hold.is-active {
+  background: rgba(255, 176, 32, 0.45);
+}
+
+.ruler-transition {
+  background: repeating-linear-gradient(135deg, var(--line-strong) 0 2px, transparent 2px 5px);
+}
+
+.ruler-playhead {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.ruler-playhead::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -4px;
+  width: 10px;
+  height: 6px;
+  border-radius: 2px;
   background: var(--accent);
 }
 
@@ -65,7 +104,7 @@
   align-items: flex-start;
   gap: 0;
   margin: 0;
-  padding: 8px 12px 10px;
+  padding: 6px 12px 10px;
   list-style: none;
 }
 
@@ -84,11 +123,24 @@
   box-shadow: -3px 0 0 var(--accent);
 }
 
-.scene-link {
-  width: 14px;
-  height: 1px;
-  margin-bottom: 18px;
-  background: var(--line-strong);
+.transition-chip {
+  flex: none;
+  min-width: 34px;
+  height: 20px;
+  margin: 0 4px 18px;
+  padding: 0 6px;
+  border-radius: 99px;
+  color: var(--faint);
+  background: var(--sunken);
+  box-shadow: 0 0 0 1px var(--line) inset;
+  font-size: 10.5px;
+  font-weight: 600;
+  transition: color var(--fast), box-shadow var(--fast);
+}
+
+.transition-chip:hover {
+  color: var(--text);
+  box-shadow: 0 0 0 1px var(--line-strong) inset;
 }
 
 .scene-card {

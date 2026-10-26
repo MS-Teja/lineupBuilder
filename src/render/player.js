@@ -248,8 +248,9 @@ export function drawPlayer(context, slot, geometry, portraits, options) {
   context.stroke();
   context.setLineDash([]);
 
-  if (showNames) {
+  if (showNames && (slot.labelOpacity ?? 1) > 0.01) {
     const draw = LABELS[labelStyle] ?? drawBroadcastLabel;
+    context.globalAlpha = (isGhost ? 0.32 : slot.opacity) * (slot.labelOpacity ?? 1);
     draw(context, {
       text: profile.label?.trim() || lastName(profile.name),
       number: portrait ? profile.number : null,

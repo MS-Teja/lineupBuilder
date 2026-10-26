@@ -3,6 +3,7 @@ import { ProjectContext } from './context';
 import { createHistory, withHistory } from './history';
 import { loadProject, saveProject } from './persistence';
 import { projectReducer } from './reducer';
+import usePlayback from './usePlayback';
 
 const historyReducer = withHistory(projectReducer);
 
@@ -13,6 +14,7 @@ const initialUi = (project) => ({
   popover: null, // { type: 'search', slotId }
   scope: 'all', // layout edits apply to 'all' scenes or just this 'scene'
   isPlaying: false,
+  isPreviewing: false, // stage shows the timeline at the playhead, not the editable scene
   isExportOpen: false,
   isInspectorOpen: false,
 });
@@ -31,10 +33,10 @@ export default function ProjectProvider({ children }) {
     setUiState((current) => ({ ...current, ...(typeof patch === 'function' ? patch(current) : patch) }));
   }, []);
 
-  // Any edit stops playback so the stage shows what's being changed.
-  const stopPlayback = useCallback(() => {
-    setUiState((current) => (current.isPlaying ? { ...current, isPlaying: false } : current));
-  }, []);
+  const playback = usePlayback({ project, ui, setUiState, activeIndex: project.scenes.indexOf(activeScene) });
+
+  // Any edit leaves the preview so the stage shows what's being changed.
+  const stopPlayback = playback.exitPreview;
 
   const dispatch = useCallback((action, { coalesce } = {}) => {
     stopPlayback();
@@ -87,7 +89,8 @@ export default function ProjectProvider({ children }) {
     notify,
     dismissToast,
     saveStatus,
-  }), [project, activeScene, dispatch, undo, redo, history.past.length, history.future.length, ui, setUi, toast, notify, dismissToast, saveStatus]);
+    playback,
+  }), [project, activeScene, dispatch, undo, redo, history.past.length, history.future.length, ui, setUi, toast, notify, dismissToast, saveStatus, playback]);
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;
 }

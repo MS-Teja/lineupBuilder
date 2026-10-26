@@ -6,7 +6,7 @@ import { formationLabel } from '../state/project';
 import { playhead } from '../state/playhead';
 import { getGeometry, markerSize, toFramePoint } from '../render/geometry';
 import { resolveScene } from '../render/scene';
-import { buildTimeline, sampleTimeline } from '../render/timeline';
+import { sampleTimeline } from '../render/timeline';
 import Popover from '../ui/Popover';
 import HitLayer from './HitLayer';
 import { paint } from './paint';
@@ -17,12 +17,12 @@ import './stage.css';
 const PAD = 32;
 
 export default function Stage() {
-  const { project, activeScene, ui, setUi, dispatch } = useProject();
+  const { project, activeScene, ui, setUi, dispatch, playback } = useProject();
+  const { timeline } = playback;
   const { assignPlayer } = usePlayerCommands();
   const areaRef = useRef(null);
   const frameRef = useRef(null);
   const canvasRef = useRef(null);
-  const latest = useRef({});
   const [area, setArea] = useState({ width: 0, height: 0 });
   const [drag, setDrag] = useState(null);
   const portraits = usePortraits(project);
@@ -54,41 +54,20 @@ export default function Stage() {
 
   // Editing: redraw the active scene whenever anything it depends on changes.
   useEffect(() => {
-    if (!ui.isPlaying) paint(canvasRef.current, rendered, { width: frameWidth, portraits, style: project.style, editor: true });
-  }, [rendered, frameWidth, portraits, project.style, ui.isPlaying]);
+    if (!ui.isPreviewing) paint(canvasRef.current, rendered, { width: frameWidth, portraits, style: project.style, editor: true });
+  }, [rendered, frameWidth, portraits, project.style, ui.isPreviewing]);
 
+  // Previewing (playing, scrubbing, paused mid-transition): paint the shared
+  // timeline at the playhead on every playhead change, outside React renders.
   useEffect(() => {
-    latest.current = { project, frameWidth, portraits };
-  });
-
-  // Playback: sample the same timeline the exporters use, one frame per rAF.
-  // Edits stop playback (see ProjectProvider), so the project is read once at start.
-  useEffect(() => {
-    if (!ui.isPlaying) return undefined;
-    const { project: playing } = latest.current;
-    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const timeline = buildTimeline(playing, { reducedMotion });
-    const startedAt = performance.now();
-    let frameId = 0;
-    let lastIndex = -1;
-
-    const tick = (now) => {
-      const t = Math.min(now - startedAt, timeline.total);
-      const { rendered: frame, index } = sampleTimeline(timeline, Math.min(t, timeline.total - 1));
-      const { frameWidth: width, portraits: images } = latest.current;
-      paint(canvasRef.current, frame, { width, portraits: images, style: playing.style, editor: false });
-      playhead.set(t);
-      if (index !== lastIndex) {
-        lastIndex = index;
-        setUi({ activeSceneId: playing.scenes[index].id });
-      }
-      if (t >= timeline.total) setUi({ isPlaying: false });
-      else frameId = requestAnimationFrame(tick);
+    if (!ui.isPreviewing) return undefined;
+    const draw = () => {
+      const { rendered: frame } = sampleTimeline(timeline, playhead.get());
+      paint(canvasRef.current, frame, { width: frameWidth, portraits, style: project.style, editor: false });
     };
-
-    frameId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frameId);
-  }, [ui.isPlaying, setUi]);
+    draw();
+    return playhead.subscribe(draw);
+  }, [ui.isPreviewing, timeline, frameWidth, portraits, project.style]);
 
   const field = {
     left: geometry.field.x * cssScale,
@@ -133,7 +112,7 @@ export default function Stage() {
     setUi({ selectedSlotId: slotId, focus: 'slot', popover: null });
   };
 
-  const selected = !ui.isPlaying && !drag && !popoverSlotId && ui.selectedSlotId;
+  const selected = !ui.isPreviewing && !drag && !popoverSlotId && ui.selectedSlotId;
   const sceneIndex = project.scenes.indexOf(activeScene);
 
   return (
@@ -142,7 +121,7 @@ export default function Stage() {
       className="stage-area"
       aria-label="Pitch"
       onPointerDown={(event) => {
-        if (ui.isPlaying) setUi({ isPlaying: false });
+        if (ui.isPreviewing) playback.exitPreview();
         else if (event.target === event.currentTarget) deselect();
       }}
     >
@@ -154,12 +133,13 @@ export default function Stage() {
           </span>
           <span>{formationLabel(activeScene)}</span>
           <span>{project.orientation === 'landscape' ? '16:9 · 1920×1080' : '9:16 · 1080×1920'}</span>
-          {ui.scope === 'scene' && <span className="stage-meta-scope">Editing this scene only</span>}
+          {ui.scope === 'scene' && !ui.isPreviewing && <span className="stage-meta-scope">Editing this scene only</span>}
+          {ui.isPreviewing && !ui.isPlaying && <span className="stage-meta-scope">Preview · click the pitch to edit</span>}
         </div>
 
         <canvas ref={canvasRef} className="stage-canvas" />
 
-        {!ui.isPlaying && frameWidth > 0 && (
+        {!ui.isPreviewing && frameWidth > 0 && (
           <HitLayer
             slots={rendered.slots}
             field={field}

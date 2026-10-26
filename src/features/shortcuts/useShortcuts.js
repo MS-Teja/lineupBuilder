@@ -5,11 +5,12 @@ import usePlayerCommands from '../players/usePlayerCommands';
 const NUDGE = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
 
 /**
- * Space play/stop · ⌘Z / ⇧⌘Z undo/redo · Delete remove · H hide/show ·
- * arrows nudge (Shift ×5) · Alt+←/→ previous/next scene · Esc deselect.
+ * Space play/pause · Home back to start · ⌘Z / ⇧⌘Z undo/redo · Delete remove ·
+ * H hide/show · arrows nudge (Shift ×5) · Alt+←/→ previous/next scene ·
+ * Esc leave preview / deselect.
  */
 export default function useShortcuts() {
-  const { project, activeScene, ui, setUi, undo, redo } = useProject();
+  const { project, activeScene, ui, setUi, undo, redo, playback } = useProject();
   const { removePlayer, toggleVisible, nudge } = usePlayerCommands();
   const handler = useRef(null);
 
@@ -28,13 +29,17 @@ export default function useShortcuts() {
       }
 
       if (isTyping || mod || ui.isExportOpen) return;
-      const selected = !ui.isPlaying && ui.focus === 'slot' ? ui.selectedSlotId : null;
+      const selected = !ui.isPreviewing && ui.focus === 'slot' ? ui.selectedSlotId : null;
 
       if (event.key === ' ') {
         event.preventDefault();
-        setUi((state) => ({ isPlaying: !state.isPlaying, popover: null }));
+        playback.togglePlay();
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        playback.seek(0);
       } else if (event.key === 'Escape') {
-        setUi(ui.isPlaying ? { isPlaying: false } : { selectedSlotId: null, focus: 'style', popover: null });
+        if (ui.isPreviewing) playback.exitPreview();
+        else setUi({ selectedSlotId: null, focus: 'style', popover: null });
       } else if ((event.key === 'Delete' || event.key === 'Backspace') && selected) {
         event.preventDefault();
         removePlayer(selected);
@@ -44,7 +49,8 @@ export default function useShortcuts() {
         event.preventDefault();
         const index = project.scenes.indexOf(activeScene) + (event.key === 'ArrowLeft' ? -1 : 1);
         const scene = project.scenes[Math.max(0, Math.min(project.scenes.length - 1, index))];
-        setUi({ activeSceneId: scene.id, focus: 'scene', selectedSlotId: null, popover: null, isPlaying: false });
+        playback.exitPreview();
+        setUi({ activeSceneId: scene.id, focus: 'scene', selectedSlotId: null, popover: null });
       } else if (NUDGE[event.key] && selected) {
         event.preventDefault();
         const [dx, dy] = NUDGE[event.key];

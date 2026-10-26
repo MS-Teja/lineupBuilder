@@ -7,7 +7,7 @@ import { Button } from '../../ui/controls';
 import Popover from '../../ui/Popover';
 
 export default function RevealMenu() {
-  const { project, dispatch, setUi, notify, undo } = useProject();
+  const { project, dispatch, setUi, notify, playback } = useProject();
   const [isOpen, setIsOpen] = useState(false);
   const anchor = useRef(null);
   const close = useCallback(() => setIsOpen(false), []);
@@ -17,7 +17,7 @@ export default function RevealMenu() {
     dispatch({ type: 'applyReveal', preset: preset.id, idPrefix: makeId('reveal') });
     // No id match → the editor falls back to the final scene of the new reveal.
     setUi({ activeSceneId: null, focus: 'style', selectedSlotId: null });
-    notify(`${preset.label} reveal ready — press Space to preview`, { label: 'Undo', onClick: undo });
+    notify(`${preset.label} reveal ready`, { label: 'Play', onClick: () => playback.play(0) });
     close();
   };
 

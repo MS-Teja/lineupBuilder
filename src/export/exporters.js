@@ -51,11 +51,12 @@ export function videoFormat() {
 }
 
 // Steps through the shared playback timeline, drawing each frame into one canvas.
-async function* timelineFrames(project, { fps, maxFrames, scale, readback = false }) {
+async function* timelineFrames(project, { fps, maxFrames, scale, readback = false, delayStep = 0 }) {
   const timeline = buildTimeline(project);
   const seconds = Math.max(timeline.total / 1000, 0.001);
   const safeFps = Math.max(4, Math.min(fps, Math.floor(maxFrames / seconds)));
-  const delay = 1000 / safeFps;
+  // GIF stores delays in hundredths of a second; rounding each frame would drift.
+  const delay = delayStep ? Math.ceil(1000 / safeFps / delayStep) * delayStep : 1000 / safeFps;
   const count = Math.max(1, Math.ceil(timeline.total / delay));
   const portraits = await preparePortraits(rosterPhotos(project));
   const { frame } = getGeometry(project.orientation);
@@ -65,7 +66,7 @@ async function* timelineFrames(project, { fps, maxFrames, scale, readback = fals
   const context = canvas.getContext('2d', { willReadFrequently: readback });
 
   for (let index = 0; index < count; index += 1) {
-    const { rendered } = sampleTimeline(timeline, Math.min(index * delay, timeline.total - 1));
+    const { rendered } = sampleTimeline(timeline, index * delay);
     renderScene(context, rendered, { scale, portraits, style: project.style });
     yield { canvas, context, delay, index, count };
   }
@@ -85,7 +86,7 @@ export async function exportGif({ project, filename, onProgress }) {
   const { frame } = getGeometry(project.orientation);
   const scale = 1280 / Math.max(frame.width, frame.height);
 
-  for await (const { canvas, context, delay, index, count } of timelineFrames(project, { fps: 12, maxFrames: 150, scale, readback: true })) {
+  for await (const { canvas, context, delay, index, count } of timelineFrames(project, { fps: 12.5, maxFrames: 150, scale, readback: true, delayStep: 10 })) {
     const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
     const palette = quantize(data, 256);
     gif.writeFrame(applyPalette(data, palette), canvas.width, canvas.height, { palette, delay: Math.round(delay), repeat: 0 });

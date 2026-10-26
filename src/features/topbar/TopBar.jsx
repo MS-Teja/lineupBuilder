@@ -13,7 +13,7 @@ const orientations = [
 ];
 
 export default function TopBar() {
-  const { project, dispatch, undo, redo, canUndo, canRedo, ui, setUi, saveStatus } = useProject();
+  const { project, dispatch, undo, redo, canUndo, canRedo, ui, setUi, saveStatus, playback } = useProject();
 
   return (
     <header className="topbar">
@@ -57,7 +57,7 @@ export default function TopBar() {
           active={ui.isInspectorOpen}
           onClick={() => setUi((current) => ({ isInspectorOpen: !current.isInspectorOpen }))}
         />
-        <Button variant="primary" icon={Download} onClick={() => setUi({ isExportOpen: true, isPlaying: false })}>
+        <Button variant="primary" icon={Download} onClick={() => { playback.exitPreview(); setUi({ isExportOpen: true }); }}>
           Export
         </Button>
       </div>

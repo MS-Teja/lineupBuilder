@@ -5,23 +5,18 @@ import { Button, Group, Segmented, Slider, Toggle } from '../../ui/controls';
 import InspectorHeader from './InspectorHeader';
 
 const entryOptions = [
-  { value: 'lift', label: 'Lift' },
+  { value: 'pop', label: 'Pop', title: 'Scale up with a little bounce' },
+  { value: 'lift', label: 'Lift', title: 'Rise into place' },
+  { value: 'drop', label: 'Drop', title: 'Fall into place' },
   { value: 'fade', label: 'Fade' },
-  { value: 'scale', label: 'Pop' },
-  { value: 'none', label: 'None' },
+  { value: 'none', label: 'None', title: 'Appear instantly' },
 ];
 
 const exitOptions = [
-  { value: 'sink', label: 'Sink' },
   { value: 'fade', label: 'Fade' },
-  { value: 'scale', label: 'Shrink' },
-  { value: 'none', label: 'None' },
-];
-
-const transitionOptions = [
-  { value: 'flow', label: 'Flow', title: 'Ease in and out' },
-  { value: 'glide', label: 'Glide', title: 'Fast start, soft landing' },
-  { value: 'cut', label: 'Cut', title: 'Jump straight to the next scene' },
+  { value: 'sink', label: 'Sink' },
+  { value: 'shrink', label: 'Shrink' },
+  { value: 'none', label: 'None', title: 'Disappear instantly' },
 ];
 
 const labelOptions = [
@@ -72,21 +67,16 @@ export default function StyleInspector() {
           <span className="control-label">Players leave</span>
           <Segmented stretch size="sm" label="Exit" options={exitOptions} value={motion.exit} onChange={(exit) => setMotion({ exit })} />
         </div>
-        <div className="stack">
-          <span className="control-label">Between scenes</span>
-          <Segmented stretch size="sm" label="Transition" options={transitionOptions} value={motion.transition} onChange={(transition) => setMotion({ transition })} />
-        </div>
-        {motion.transition !== 'cut' && (
-          <Slider
-            label="Transition time"
-            value={motion.duration}
-            min={200}
-            max={1500}
-            step={20}
-            format={(value) => `${(value / 1000).toFixed(2)}s`}
-            onChange={(duration) => setMotion({ duration }, 'motion-duration')}
-          />
-        )}
+        <Slider
+          label="Stagger between players"
+          value={motion.stagger}
+          min={0}
+          max={200}
+          step={5}
+          format={(value) => (value ? `${value} ms` : 'Together')}
+          onChange={(stagger) => setMotion({ stagger }, 'motion-stagger')}
+        />
+        <p className="hint">Transition length and easing are set per scene: select a scene or the chip between two scenes.</p>
       </Group>
 
       <Group title="Editor">

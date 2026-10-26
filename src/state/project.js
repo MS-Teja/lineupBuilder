@@ -1,7 +1,7 @@
 import { getFormation, initialSlots, parseFormationString } from '../utils/formations';
 import { buildReveal } from './reveal';
 
-export const PROJECT_VERSION = 1;
+export const PROJECT_VERSION = 2;
 
 export const SLOT_IDS = initialSlots.map((slot) => slot.id);
 
@@ -16,7 +16,11 @@ export const accentFor = (name = '') => {
 
 export const DEFAULT_STYLE = { markerScale: 1, showNames: true, labelStyle: 'broadcast', showGuides: false, snap: true };
 
-export const DEFAULT_MOTION = { entry: 'lift', exit: 'fade', transition: 'flow', duration: 520 };
+// How players appear and leave, and the delay between consecutive players (ms).
+export const DEFAULT_MOTION = { entry: 'pop', exit: 'fade', stagger: 70 };
+
+// The transition INTO a scene. duration 0 is a hard cut.
+export const DEFAULT_TRANSITION = { duration: 600, easing: 'smooth' };
 
 export const lastName = (name = '') => name.split(' ').filter(Boolean).at(-1) || name || 'Player';
 
@@ -64,8 +68,26 @@ export function createDefaultProject() {
   };
 }
 
+// v1 had one global transition (motion.transition 'flow' | 'glide' | 'cut' and
+// motion.duration); v2 gives every scene its own transition.
+const migrateV1 = (raw) => {
+  const transition = {
+    duration: raw.motion?.transition === 'cut' ? 0 : (raw.motion?.duration ?? DEFAULT_TRANSITION.duration),
+    easing: raw.motion?.transition === 'glide' ? 'snappy' : 'smooth',
+  };
+  const entry = { lift: 'lift', fade: 'fade', scale: 'pop', none: 'none' }[raw.motion?.entry] ?? DEFAULT_MOTION.entry;
+  const exit = { sink: 'sink', fade: 'fade', scale: 'shrink', none: 'none' }[raw.motion?.exit] ?? DEFAULT_MOTION.exit;
+  return {
+    ...raw,
+    version: PROJECT_VERSION,
+    motion: { entry, exit, stagger: DEFAULT_MOTION.stagger },
+    scenes: raw.scenes.map((scene) => ({ ...scene, transition: { ...transition } })),
+  };
+};
+
 // Accepts whatever came out of storage; returns a usable project or null.
-export function normalizeProject(raw) {
+export function normalizeProject(stored) {
+  const raw = stored?.version === 1 && Array.isArray(stored.scenes) ? migrateV1(stored) : stored;
   if (!raw || raw.version !== PROJECT_VERSION || !Array.isArray(raw.scenes) || !raw.scenes.length) return null;
   const valid = raw.scenes.every((scene) => SLOT_IDS.every((slotId) => scene.slots?.[slotId]?.positionId));
   if (!valid) return null;
@@ -77,5 +99,6 @@ export function normalizeProject(raw) {
     motion: { ...DEFAULT_MOTION, ...raw.motion },
     roster: Object.fromEntries(SLOT_IDS.map((slotId) => [slotId, raw.roster?.[slotId] ?? null])),
     accents: { ...raw.accents },
+    scenes: raw.scenes.map((scene) => ({ ...scene, transition: { ...DEFAULT_TRANSITION, ...scene.transition } })),
   };
 }

@@ -8,6 +8,8 @@ A broadcast-minded football lineup editor for YouTube creators. Build an XI on t
 - **One inspector.** With nothing selected it shows lineup style and motion (including the name-label style: Broadcast, Pill or Clean); select a player to edit details, role and the name shown on the pitch; select a scene to rename or retime it.
 - **Photo framing.** Drag the photo inside the circle to position it, scroll or use the slider to zoom (50–400%), or use Fill / Fit / Close-up. The dimmed area shows what's cropped. Pick a marker colour from the swatches or any custom colour.
 - **Scenes.** The strip at the bottom is your timeline. Every scene is a full lineup state with its own formation, positions and who's visible. `+ Scene` duplicates the current one; **Reveal** builds a whole sequence in one click (one by one, line by line, or all at once). Drag thumbnails to reorder.
+- **Transitions.** Each scene has its own transition in: length (0 = cut) and easing, edited from the chip between two scenes. Players who appear enter at their new spot (Pop, Lift, Drop, Fade), players who leave exit where they stand, and everyone else glides to their new position. Entrances stagger keeper → defence → midfield → attack. **Preview** plays just that transition.
+- **Transport.** Play/pause continues from wherever you are; drag along the ruler to scrub any frame. Resting on a scene returns you to editing it.
 - **Edit scope.** "Pitch edits apply to" decides whether formation, role and position changes hit all scenes or only the selected one, so you can animate a 4-4-2 shifting into a 3-5-2.
 - **What you see is what you export.** The stage, thumbnails, preview playback and every export are drawn by the same canvas renderer.
 - **Saved automatically** in this browser, with full undo/redo.
@@ -16,13 +18,14 @@ A broadcast-minded football lineup editor for YouTube creators. Build an XI on t
 
 | Key | Action |
 | --- | --- |
-| Space | Play / stop |
+| Space | Play / pause |
+| Home | Back to the start |
 | ⌘Z / ⇧⌘Z (Ctrl+Z / Ctrl+Y) | Undo / redo |
 | Delete | Remove selected player |
 | H | Hide / show selected player in this scene |
 | Arrow keys (Shift ×5) | Nudge selected player |
 | Alt + ← / → | Previous / next scene |
-| Esc | Close popover, deselect |
+| Esc | Close popover, leave preview, deselect |
 
 ## Export
 
