@@ -121,6 +121,29 @@ export const getCoordinates = (positionId, orientation = 'portrait') => {
   return coordinates;
 };
 
+// Converts tactical pitch coordinates between landscape (16:9) and portrait (9:16).
+// In landscape: x is progress (0 own goal -> 100 opp goal), y is lateral (0 left -> 100 right).
+// In portrait: x is lateral (0 left -> 100 right), y is inverted progress (0 opp goal -> 100 own goal).
+export const convertCoordinates = (x, y, fromOrientation, toOrientation) => {
+  if (fromOrientation === toOrientation || x == null || y == null) return { x, y };
+
+  if (fromOrientation === 'landscape' && toOrientation === 'portrait') {
+    return {
+      x: Math.round(Math.max(4, Math.min(96, y)) * 10) / 10,
+      y: Math.round(Math.max(4, Math.min(96, 100 - x)) * 10) / 10,
+    };
+  }
+
+  if (fromOrientation === 'portrait' && toOrientation === 'landscape') {
+    return {
+      x: Math.round(Math.max(4, Math.min(96, 100 - y)) * 10) / 10,
+      y: Math.round(Math.max(4, Math.min(96, x)) * 10) / 10,
+    };
+  }
+
+  return { x, y };
+};
+
 const seed = (id, positionId, profile, accent) => ({
   id,
   positionId,

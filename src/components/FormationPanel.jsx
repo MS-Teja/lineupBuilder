@@ -1,6 +1,6 @@
-import { ChevronDown, ChevronUp, LayoutPanelTop, Minus, Monitor, Pen, Plus, Smartphone, SlidersHorizontal, X } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { allRoleOptions, formationCatalog, parseFormationString, roleMap } from '../utils/formations';
+import { ChevronDown, ChevronUp, Circle, Grid3X3, LayoutPanelTop, Magnet, Minus, Monitor, Pen, Plus, RotateCcw, Smartphone, SlidersHorizontal, Type, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { allRoleOptions, formationCatalog, parseFormationString } from '../utils/formations';
 
 const MIN_PER_LINE = 1;
 const MAX_PER_LINE = 5;
@@ -44,10 +44,20 @@ export default function FormationPanel({
   isCustomShape,
   customFormationInput,
   slots,
+  circleScale,
+  showNames,
+  showGrid = true,
+  snapToGrid = true,
+  hasCustomPositions,
   onFormationChange,
   onCustomFormation,
   onRoleOverride,
   onOrientationChange,
+  onCircleScaleChange,
+  onShowNamesChange,
+  onShowGridChange,
+  onSnapToGridChange,
+  onResetPositions,
   onAddPlayer,
   onClose,
 }) {
@@ -61,23 +71,29 @@ export default function FormationPanel({
   const isValid = parsed !== null;
   const outfieldSum = lines.reduce((sum, n) => sum + n, 0);
 
-  // Sync lines from text input when it produces a valid parse
-  useEffect(() => {
-    if (parsed) {
-      const nums = textInput.replace(/\s+/g, '').replace(/–/g, '-').split('-').map(Number);
+  const handleTextChange = (value) => {
+    setTextInput(value);
+    const p = parseFormationString(value);
+    if (p) {
+      const nums = value.replace(/\s+/g, '').replace(/–/g, '-').split('-').map(Number);
       setLines(nums);
     }
-  }, [textInput, parsed]);
+  };
 
-  // When user opens custom editor, seed from current formation if it's a preset
-  useEffect(() => {
-    if (isCustomOpen && !isCustomShape && formationId) {
-      const preset = formationCatalog.find((f) => f.id === formationId);
-      if (preset) {
-        setTextInput(preset.id);
+  const toggleCustomOpen = () => {
+    setIsCustomOpen((current) => {
+      const next = !current;
+      if (next && !isCustomShape && formationId) {
+        const preset = formationCatalog.find((f) => f.id === formationId);
+        if (preset) {
+          setTextInput(preset.id);
+          const nums = preset.id.split('-').map(Number);
+          setLines(nums);
+        }
       }
-    }
-  }, [isCustomOpen]);
+      return next;
+    });
+  };
 
   const updateLine = (index, newValue) => {
     const next = [...lines];
@@ -147,7 +163,7 @@ export default function FormationPanel({
           <button
             type="button"
             className={`formation-option formation-option-custom ${isCustomShape ? 'is-active' : ''} ${isCustomOpen ? 'is-expanded' : ''}`}
-            onClick={() => setIsCustomOpen((open) => !open)}
+            onClick={toggleCustomOpen}
           >
             <span className="formation-index"><Pen size={11} /></span>
             <span className="formation-label">
@@ -168,7 +184,7 @@ export default function FormationPanel({
                 <input
                   type="text"
                   value={textInput}
-                  onChange={(event) => setTextInput(event.target.value)}
+                  onChange={(event) => handleTextChange(event.target.value)}
                   placeholder="e.g. 4-1-4-1"
                   spellCheck={false}
                   aria-label="Formation string"
@@ -240,7 +256,6 @@ export default function FormationPanel({
           {showRoleOverrides && (
             <div className="role-override-list">
               {slots.map((slot, index) => {
-                const currentRole = roleMap[slot.positionId];
                 const playerLabel = slot.profile?.name
                   ? slot.profile.name.split(' ').at(-1)
                   : `Slot ${index + 1}`;
@@ -267,6 +282,143 @@ export default function FormationPanel({
           )}
         </section>
       )}
+
+      <section className="tool-section display-section">
+        <div className="section-kicker">
+          <Circle size={14} />
+          <span>Display & Sizing</span>
+        </div>
+
+        <div className="display-control-block">
+          <div className="display-control-header">
+            <span className="display-control-label">Circle size</span>
+            <span className="circle-size-value">
+              {Math.round((typeof circleScale === 'number' ? circleScale : ({ xs: 0.65, sm: 0.8, md: 1, lg: 1.2, xl: 1.4, xxl: 1.65 }[circleScale] ?? 1)) * 100)}%
+            </span>
+          </div>
+
+          <div className="circle-slider-row">
+            <button
+              type="button"
+              className="circle-step-btn"
+              onClick={() => {
+                const current = typeof circleScale === 'number' ? circleScale : ({ xs: 0.65, sm: 0.8, md: 1, lg: 1.2, xl: 1.4, xxl: 1.65 }[circleScale] ?? 1);
+                onCircleScaleChange(Math.max(0.5, Math.round((current - 0.05) * 100) / 100));
+              }}
+              title="Decrease size"
+              aria-label="Decrease circle size"
+            >
+              <Minus size={12} />
+            </button>
+            <input
+              type="range"
+              min="0.5"
+              max="1.75"
+              step="0.05"
+              value={typeof circleScale === 'number' ? circleScale : ({ xs: 0.65, sm: 0.8, md: 1, lg: 1.2, xl: 1.4, xxl: 1.65 }[circleScale] ?? 1)}
+              onChange={(e) => onCircleScaleChange(parseFloat(e.target.value))}
+              className="circle-size-slider"
+              aria-label="Circle size slider"
+            />
+            <button
+              type="button"
+              className="circle-step-btn"
+              onClick={() => {
+                const current = typeof circleScale === 'number' ? circleScale : ({ xs: 0.65, sm: 0.8, md: 1, lg: 1.2, xl: 1.4, xxl: 1.65 }[circleScale] ?? 1);
+                onCircleScaleChange(Math.min(1.75, Math.round((current + 0.05) * 100) / 100));
+              }}
+              title="Increase size"
+              aria-label="Increase circle size"
+            >
+              <Plus size={12} />
+            </button>
+          </div>
+
+          <div className="circle-presets-row" role="group" aria-label="Circle size presets">
+            {[
+              ['xs', 'XS', 0.65],
+              ['sm', 'S', 0.8],
+              ['md', 'M', 1.0],
+              ['lg', 'L', 1.2],
+              ['xl', 'XL', 1.4],
+              ['xxl', '2XL', 1.65],
+            ].map(([id, label, val]) => {
+              const currentVal = typeof circleScale === 'number' ? circleScale : ({ xs: 0.65, sm: 0.8, md: 1, lg: 1.2, xl: 1.4, xxl: 1.65 }[circleScale] ?? 1);
+              const isActive = Math.abs(currentVal - val) < 0.04;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  className={`preset-pill ${isActive ? 'is-active' : ''}`}
+                  onClick={() => onCircleScaleChange(val)}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="display-control">
+          <span className="display-control-label">
+            <Type size={13} />
+            Player names
+          </span>
+          <button
+            type="button"
+            className={`name-toggle-btn ${showNames ? 'is-on' : ''}`}
+            onClick={() => onShowNamesChange(!showNames)}
+            aria-pressed={showNames}
+          >
+            {showNames ? 'Visible' : 'Hidden'}
+          </button>
+        </div>
+
+        <div className="display-control">
+          <span className="display-control-label">
+            <Grid3X3 size={13} />
+            Tactical grid
+          </span>
+          <button
+            type="button"
+            className={`name-toggle-btn ${showGrid ? 'is-on' : ''}`}
+            onClick={() => onShowGridChange(!showGrid)}
+            aria-pressed={showGrid}
+          >
+            {showGrid ? 'Visible' : 'Hidden'}
+          </button>
+        </div>
+
+        <div className="display-control">
+          <span className="display-control-label">
+            <Magnet size={13} />
+            Snap alignment
+          </span>
+          <button
+            type="button"
+            className={`name-toggle-btn ${snapToGrid ? 'is-on' : ''}`}
+            onClick={() => onSnapToGridChange(!snapToGrid)}
+            aria-pressed={snapToGrid}
+            title={snapToGrid ? "Snaps to tactical grid & teammates" : "Freeform movement"}
+          >
+            {snapToGrid ? 'Active' : 'Freeform'}
+          </button>
+        </div>
+
+        {hasCustomPositions && onResetPositions && (
+          <div className="realign-section">
+            <button
+              type="button"
+              className="realign-formation-btn"
+              onClick={onResetPositions}
+              title={`Re-align all players to ${formationId} layout`}
+            >
+              <RotateCcw size={12} />
+              Re-align to {formationId} preset
+            </button>
+          </div>
+        )}
+      </section>
 
       <section className="tool-section output-section">
         <div className="section-kicker">

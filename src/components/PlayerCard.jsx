@@ -6,6 +6,7 @@ const labelFor = (name) => name.split(' ').filter(Boolean).at(-1) || name;
 function Portrait({ player }) {
   const [hasImageError, setHasImageError] = useState(false);
   const [triedFallback, setTriedFallback] = useState(false);
+  const cropY = player.photoCropY ?? 0;
 
   if (player.photo && !hasImageError) {
     const isData = player.photo.startsWith('data:') || player.photo.startsWith('blob:');
@@ -17,6 +18,7 @@ function Portrait({ player }) {
       <img
         src={src}
         alt=""
+        style={{ objectPosition: `50% ${cropY}%` }}
         onError={() => {
           if (!triedFallback && !isData) {
             setTriedFallback(true);
@@ -37,7 +39,10 @@ export default function PlayerCard({
   role,
   selected,
   motion,
+  isDragging,
+  isSwapTarget,
   onSelect,
+  onPointerDown,
   onDragStart,
   onDragEnd,
 }) {
@@ -51,11 +56,15 @@ export default function PlayerCard({
 
   if (isEmpty) {
     return (
-      <div className="player-pin slot-pin" style={style}>
+      <div className={`player-pin slot-pin ${isDragging ? 'is-dragging' : ''} ${isSwapTarget ? 'is-swap-target' : ''}`} style={style}>
         <button
           type="button"
           className={`slot-marker ${selected ? 'is-selected' : ''}`}
           onClick={(e) => { e.stopPropagation(); onSelect(slot.id); }}
+          onPointerDown={(event) => onPointerDown?.(event, slot.id)}
+          onDragStart={(event) => onDragStart?.(event, slot.id)}
+          onDragEnd={onDragEnd}
+          draggable
           aria-label={`Add a player to ${role.label}`}
         >
           <span className="slot-add"><Plus size={18} strokeWidth={2.25} /></span>
@@ -66,13 +75,14 @@ export default function PlayerCard({
 
   return (
     <div
-      className={`player-pin ${selected ? 'is-selected' : ''} ${slot.isRemoving ? 'is-removing' : ''} ${slot.motionKey ? 'is-fresh' : ''} entry-${motion.playerEntry} exit-${motion.playerExit}`}
+      className={`player-pin ${selected ? 'is-selected' : ''} ${isDragging ? 'is-dragging' : ''} ${isSwapTarget ? 'is-swap-target' : ''} ${slot.isRemoving ? 'is-removing' : ''} ${slot.motionKey ? 'is-fresh' : ''} entry-${motion.playerEntry} exit-${motion.playerExit}`}
       style={style}
     >
       <button
         type="button"
         className={`player-token ${isConcealed ? 'is-concealed' : ''}`}
         onClick={(e) => { e.stopPropagation(); onSelect(slot.id); }}
+        onPointerDown={(event) => onPointerDown?.(event, slot.id)}
         onDragStart={(event) => onDragStart(event, slot.id)}
         onDragEnd={onDragEnd}
         draggable={!slot.isRemoving}

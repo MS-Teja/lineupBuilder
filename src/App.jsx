@@ -7,6 +7,7 @@ import PlayerDirectory from './components/PlayerDirectory';
 import PlayerInspector from './components/PlayerInspector';
 import { exportGif, exportStill, exportVideo } from './services/animationExport';
 import {
+  convertCoordinates,
   emptySlot,
   getFormation,
   initialSlots,
@@ -112,6 +113,11 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [exportState, setExportState] = useState(null);
   const [toast, setToast] = useState(null);
+  const [circleScale, setCircleScale] = useState(1.0);
+  const [showNames, setShowNames] = useState(true);
+  const [showGrid, setShowGrid] = useState(true);
+  const [snapToGrid, setSnapToGrid] = useState(true);
+  const [positionMode, setPositionMode] = useState(false);
   const toastTimer = useRef(null);
   const removalTimers = useRef([]);
   const playbackToken = useRef(0);
@@ -132,6 +138,7 @@ function App() {
   const isFull = slots.every((slot) => slot.profile);
   const isExporting = Boolean(exportState);
   const activeMotion = motionOverride ?? motion;
+  const displaySettings = { circleScale, showNames, showGrid, snapToGrid };
 
   const announce = (message, onUndo) => {
     window.clearTimeout(toastTimer.current);
@@ -224,7 +231,133 @@ function App() {
       });
     });
     setIsCustomShape(true);
-    announce('Roles swapped. This is now a custom shape.');
+    if (activeKeyframeId) {
+      setKeyframes((current) => current.map((kf) =>
+        kf.id === activeKeyframeId
+          ? {
+              ...kf,
+              scene: {
+                ...kf.scene,
+                slots: kf.scene.slots.map((s) => {
+                  if (s.id === sourceSlotId) {
+                    const dest = kf.scene.slots.find((x) => x.id === destinationSlotId);
+                    return { ...s, positionId: dest?.positionId ?? s.positionId, customX: dest?.customX, customY: dest?.customY };
+                  }
+                  if (s.id === destinationSlotId) {
+                    const src = kf.scene.slots.find((x) => x.id === sourceSlotId);
+                    return { ...s, positionId: src?.positionId ?? s.positionId, customX: src?.customX, customY: src?.customY };
+                  }
+                  return s;
+                }),
+              },
+            }
+          : kf
+      ));
+    }
+    announce('Players swapped.');
+  };
+
+  const positionSlot = (slotId, x, y) => {
+    setSlots((current) => current.map((slot) =>
+      slot.id === slotId ? { ...slot, customX: x, customY: y } : slot
+    ));
+    setIsCustomShape(true);
+    // Also update the active keyframe's scene with the new position
+    if (activeKeyframeId) {
+      setKeyframes((current) => current.map((kf) =>
+        kf.id === activeKeyframeId
+          ? {
+              ...kf,
+              scene: {
+                ...kf.scene,
+                slots: kf.scene.slots.map((s) =>
+                  s.id === slotId ? { ...s, customX: x, customY: y } : s
+                ),
+              },
+            }
+          : kf
+      ));
+    }
+    announce('Player positioned.');
+  };
+
+  const resetSlotPosition = (slotId) => {
+    setSlots((current) => current.map((slot) =>
+      slot.id === slotId ? { ...slot, customX: null, customY: null } : slot
+    ));
+    if (activeKeyframeId) {
+      setKeyframes((current) => current.map((kf) =>
+        kf.id === activeKeyframeId
+          ? {
+              ...kf,
+              scene: {
+                ...kf.scene,
+                slots: kf.scene.slots.map((s) =>
+                  s.id === slotId ? { ...s, customX: null, customY: null } : s
+                ),
+              },
+            }
+          : kf
+      ));
+    }
+    announce('Player reset to role position.');
+  };
+
+  const resetAllSlotPositions = () => {
+    setSlots((current) => current.map((slot) => ({ ...slot, customX: null, customY: null })));
+    if (activeKeyframeId) {
+      setKeyframes((current) => current.map((kf) =>
+        kf.id === activeKeyframeId
+          ? {
+              ...kf,
+              scene: {
+                ...kf.scene,
+                slots: kf.scene.slots.map((s) => ({ ...s, customX: null, customY: null })),
+              },
+            }
+          : kf
+      ));
+    }
+    announce('All players reset to formation positions.');
+  };
+
+  const handleOrientationChange = (nextOrientation) => {
+    if (nextOrientation === orientation) return;
+
+    // Adapt all custom-positioned slots from current orientation to next orientation
+    setSlots((current) =>
+      current.map((slot) => {
+        if (slot.customX == null || slot.customY == null) return slot;
+        const converted = convertCoordinates(slot.customX, slot.customY, orientation, nextOrientation);
+        return {
+          ...slot,
+          customX: converted.x,
+          customY: converted.y,
+        };
+      })
+    );
+
+    // Also adapt custom coordinates in all keyframe scenes so saved cues transition cleanly
+    setKeyframes((current) =>
+      current.map((kf) => ({
+        ...kf,
+        scene: {
+          ...kf.scene,
+          slots: kf.scene.slots.map((s) => {
+            if (s.customX == null || s.customY == null) return s;
+            const converted = convertCoordinates(s.customX, s.customY, orientation, nextOrientation);
+            return {
+              ...s,
+              customX: converted.x,
+              customY: converted.y,
+            };
+          }),
+        },
+      }))
+    );
+
+    setOrientation(nextOrientation);
+    announce(`Switched to ${nextOrientation === 'portrait' ? '9:16 Shorts' : '16:9 Video'} (custom positions adapted).`);
   };
 
 
@@ -433,6 +566,7 @@ function App() {
       await exportStill({
         scene: materializeExportScene(slots, makeScene(slots, formationId, isCustomShape), orientation),
         filename: `${stem}.png`,
+        displaySettings,
       });
       setExportState({ format: 'png', progress: 100 });
       announce('Current tactical frame exported as PNG.');
@@ -479,6 +613,7 @@ function App() {
           motion,
           onProgress,
           filename: `${stem}.gif`,
+          displaySettings,
         });
         announce(`High-resolution GIF exported from ${keyframes.length} keyframes.`);
       } else {
@@ -487,6 +622,7 @@ function App() {
           motion,
           onProgress,
           filenameBase: stem,
+          displaySettings,
         });
         announce(`${extension === 'mp4' ? 'MP4' : 'WebM'} video exported from ${keyframes.length} keyframes.`);
       }
@@ -566,9 +702,15 @@ function App() {
             formation={formation}
             orientation={orientation}
             motion={activeMotion}
+            circleScale={circleScale}
+            showNames={showNames}
+            showGrid={showGrid}
+            snapToGrid={snapToGrid}
+            positionMode={positionMode}
             onSelectSlot={selectSlot}
             onMoveSlot={moveSlot}
             onFreeDrag={overrideSlotRole}
+            onPositionDrag={positionSlot}
             onDeselect={() => setActivePanel(null)}
           />
         </div>
@@ -582,10 +724,20 @@ function App() {
               isCustomShape={isCustomShape}
               customFormationInput={customFormationInput}
               slots={slots}
+              circleScale={circleScale}
+              showNames={showNames}
+              showGrid={showGrid}
+              snapToGrid={snapToGrid}
+              hasCustomPositions={slots.some((s) => s.customX != null && s.customY != null)}
               onFormationChange={changeFormation}
               onCustomFormation={applyCustomFormation}
               onRoleOverride={overrideSlotRole}
-              onOrientationChange={setOrientation}
+              onOrientationChange={handleOrientationChange}
+              onCircleScaleChange={setCircleScale}
+              onShowNamesChange={setShowNames}
+              onShowGridChange={setShowGrid}
+              onSnapToGridChange={setSnapToGrid}
+              onResetPositions={resetAllSlotPositions}
               onAddPlayer={openPlayerSearch}
               onClose={() => setActivePanel(null)}
             />
@@ -600,6 +752,7 @@ function App() {
               onToggleVisibility={toggleVisibility}
               onRemovePlayer={removePlayer}
               onUpdatePlayer={updateSelectedPlayer}
+              onResetPosition={resetSlotPosition}
               onOpenDirectory={() => setIsDirectoryOpen(true)}
               onClose={() => { setActivePanel(null); setIsDirectoryOpen(false); }}
             />
@@ -623,12 +776,16 @@ function App() {
               isExpanded
               isPlaying={isPlaying}
               exportState={exportState}
+              positionMode={positionMode}
+              hasCustomPositions={slots.some((s) => s.customX != null && s.customY != null)}
               onToggle={() => setActivePanel(null)}
               onSelectKeyframe={selectKeyframe}
               onAddKeyframe={addKeyframe}
               onRemoveKeyframe={removeKeyframe}
               onUpdateKeyframe={updateKeyframe}
               onMotionChange={(patch) => setMotion((current) => ({ ...current, ...patch }))}
+              onPositionModeChange={setPositionMode}
+              onResetPositions={resetAllSlotPositions}
               onPlay={runTimeline}
               onExportVideo={() => exportTimeline('video')}
               onExportGif={() => exportTimeline('gif')}

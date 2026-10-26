@@ -86,8 +86,12 @@ export const prepareSceneAssets = async (scenes) => {
   return new Map(loaded.filter(([, image]) => image));
 };
 
-export const getExportGeometry = (orientation = 'landscape') => {
-  const frame = EXPORT_SIZES[orientation] ?? EXPORT_SIZES.landscape;
+export const getExportGeometry = (orientation = 'landscape', resolutionMultiplier = 1) => {
+  const baseFrame = EXPORT_SIZES[orientation] ?? EXPORT_SIZES.landscape;
+  const frame = {
+    width: Math.round(baseFrame.width * resolutionMultiplier),
+    height: Math.round(baseFrame.height * resolutionMultiplier),
+  };
   const isLandscape = orientation === 'landscape';
   const fieldRatio = isLandscape ? FIELD.length / FIELD.width : FIELD.width / FIELD.length;
   const fieldWidth = Math.min(frame.width, frame.height * fieldRatio);
@@ -142,8 +146,8 @@ const drawPitch = (context, geometry, orientation) => {
   const { frame, field } = geometry;
   const isLandscape = orientation === 'landscape';
   const unit = field.scale;
-  const lineWidth = Math.max(2, unit * 0.115);
-  const line = 'rgba(235, 247, 220, 0.76)';
+  const lineWidth = Math.max(3.5, unit * 0.175);
+  const line = '#ffffff';
 
   context.fillStyle = '#0a1710';
   context.fillRect(0, 0, frame.width, frame.height);
@@ -151,8 +155,9 @@ const drawPitch = (context, geometry, orientation) => {
   const gradient = isLandscape
     ? context.createLinearGradient(field.x, field.y, field.x + field.width, field.y)
     : context.createLinearGradient(field.x, field.y, field.x, field.y + field.height);
-  gradient.addColorStop(0, '#386e4d');
-  gradient.addColorStop(1, '#24563d');
+  gradient.addColorStop(0, '#1c4c31');
+  gradient.addColorStop(0.5, '#296340');
+  gradient.addColorStop(1, '#1c4c31');
   context.fillStyle = gradient;
   context.fillRect(field.x, field.y, field.width, field.height);
 
@@ -160,32 +165,21 @@ const drawPitch = (context, geometry, orientation) => {
   context.beginPath();
   context.rect(field.x, field.y, field.width, field.height);
   context.clip();
-  context.globalAlpha = 0.06;
-  context.fillStyle = '#d8f0c2';
+  context.globalAlpha = 0.03;
+  context.fillStyle = '#ffffff';
   const stripeCount = 10;
   for (let index = 0; index < stripeCount; index += 1) {
     if (index % 2) continue;
     if (isLandscape) {
-      const stripeWidth = field.width / stripeCount;
-      context.fillRect(field.x + stripeWidth * index, field.y, stripeWidth, field.height);
+      const x0 = Math.round(field.x + (field.width / stripeCount) * index);
+      const x1 = Math.round(field.x + (field.width / stripeCount) * (index + 1));
+      context.fillRect(x0, field.y, x1 - x0, field.height);
     } else {
-      const stripeHeight = field.height / stripeCount;
-      context.fillRect(field.x, field.y + stripeHeight * index, field.width, stripeHeight);
+      const y0 = Math.round(field.y + (field.height / stripeCount) * index);
+      const y1 = Math.round(field.y + (field.height / stripeCount) * (index + 1));
+      context.fillRect(field.x, y0, field.width, y1 - y0);
     }
   }
-  const glow = context.createRadialGradient(
-    field.x + field.width / 2,
-    field.y + field.height / 2,
-    0,
-    field.x + field.width / 2,
-    field.y + field.height / 2,
-    Math.max(field.width, field.height) * 0.42,
-  );
-  glow.addColorStop(0, 'rgba(184, 222, 125, 0.16)');
-  glow.addColorStop(1, 'rgba(184, 222, 125, 0)');
-  context.globalAlpha = 1;
-  context.fillStyle = glow;
-  context.fillRect(field.x, field.y, field.width, field.height);
   context.restore();
 
   context.save();
@@ -211,7 +205,7 @@ const drawPitch = (context, geometry, orientation) => {
   context.stroke();
   context.fillStyle = line;
   context.beginPath();
-  context.arc(middle.x, middle.y, Math.max(3, unit * 0.18), 0, Math.PI * 2);
+  context.arc(middle.x, middle.y, Math.max(4.5, unit * 0.28), 0, Math.PI * 2);
   context.fill();
 
   const penaltyY = (FIELD.width - PITCH.penaltyWidth) / 2;
@@ -224,7 +218,7 @@ const drawPitch = (context, geometry, orientation) => {
   [PITCH.penaltySpot, FIELD.length - PITCH.penaltySpot].forEach((distance) => {
     const spot = pitchPoint(field, orientation, distance, FIELD.width / 2);
     context.beginPath();
-    context.arc(spot.x, spot.y, Math.max(3, unit * 0.18), 0, Math.PI * 2);
+    context.arc(spot.x, spot.y, Math.max(4.5, unit * 0.28), 0, Math.PI * 2);
     context.fill();
   });
 
@@ -240,10 +234,11 @@ const drawPitch = (context, geometry, orientation) => {
     context.arc(point.x, point.y, PITCH.cornerRadius * unit, start, end);
     context.stroke();
   });
+
   context.restore();
 };
 
-const drawCover = (context, image, x, y, size) => {
+const drawCover = (context, image, x, y, size, cropY = 0) => {
   const sourceWidth = image.naturalWidth || image.width;
   const sourceHeight = image.naturalHeight || image.height;
   const sourceRatio = sourceWidth / sourceHeight;
@@ -257,21 +252,28 @@ const drawCover = (context, image, x, y, size) => {
     width = size * sourceRatio;
     drawX -= (width - size) / 2;
   } else {
-    // Tall photos are anchored to the top (like CSS object-position: 50% 0)
-    // so the face stays in frame, matching the live pitch token.
+    // Tall photos: use cropY to control vertical anchor.
+    // cropY 0 = top (default), 50 = center, 100 = bottom.
     height = size / sourceRatio;
+    const maxShift = height - size;
+    drawY -= maxShift * (cropY / 100);
   }
 
   context.drawImage(image, drawX, drawY, width, height);
 };
 
-const drawPlayer = (context, slot, coordinate, field, portraits, orientation) => {
+const CIRCLE_SCALE_MAP = { xs: 0.65, sm: 0.8, md: 1, lg: 1.2, xl: 1.4, xxl: 1.65 };
+
+const drawPlayer = (context, slot, coordinate, field, portraits, orientation, displaySettings = {}) => {
   const displayCoordinate = slot.renderCoordinate ?? coordinate;
   const point = {
     x: field.x + (displayCoordinate.x / 100) * field.width,
     y: field.y + (displayCoordinate.y / 100) * field.height,
   };
-  const marker = clamp(Math.round(field.scale * 6), 72, 102);
+  const scaleFactor = typeof displaySettings.circleScale === 'number'
+    ? displaySettings.circleScale
+    : (CIRCLE_SCALE_MAP[displaySettings.circleScale] ?? 1);
+  const marker = clamp(Math.round(field.scale * 6 * scaleFactor), 36, 180);
   const radius = marker / 2;
   const profile = slot.profile;
   const hidden = Boolean(profile) && !slot.isRevealed && slot.renderOpacity === undefined;
@@ -301,9 +303,9 @@ const drawPlayer = (context, slot, coordinate, field, portraits, orientation) =>
   context.translate(point.x, point.y);
   context.scale(slot.renderScale ?? 1, slot.renderScale ?? 1);
   context.translate(0, (slot.renderOffsetY ?? 0) * marker);
-  context.shadowColor = 'rgba(2, 12, 7, 0.42)';
-  context.shadowBlur = marker * 0.22;
-  context.shadowOffsetY = marker * 0.09;
+  context.shadowColor = 'rgba(0, 0, 0, 0.55)';
+  context.shadowBlur = marker * 0.16;
+  context.shadowOffsetY = marker * 0.08;
   context.fillStyle = profile ? (hidden ? '#4c584f' : validAccent(slot.accent)) : '#58645c';
   context.beginPath();
   context.arc(0, 0, radius, 0, Math.PI * 2);
@@ -316,18 +318,29 @@ const drawPlayer = (context, slot, coordinate, field, portraits, orientation) =>
     context.beginPath();
     context.arc(0, 0, radius, 0, Math.PI * 2);
     context.clip();
-    drawCover(context, portrait, -radius, -radius, marker);
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    drawCover(context, portrait, -radius, -radius, marker, profile.photoCropY ?? 0);
     context.restore();
   }
 
-  context.strokeStyle = profile ? 'rgba(244, 248, 239, 0.95)' : 'rgba(222, 230, 218, 0.35)';
-  context.lineWidth = Math.max(3, marker * 0.042);
+  // Crisp outer dark contrast ring
+  context.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+  context.lineWidth = Math.max(1.5, marker * 0.02);
   context.beginPath();
-  context.arc(0, 0, radius - context.lineWidth / 2, 0, Math.PI * 2);
+  context.arc(0, 0, radius, 0, Math.PI * 2);
+  context.stroke();
+
+  // Crisp inner white ring
+  context.strokeStyle = profile ? '#ffffff' : 'rgba(255, 255, 255, 0.45)';
+  const strokeWidth = Math.max(3.5, marker * 0.05);
+  context.lineWidth = strokeWidth;
+  context.beginPath();
+  context.arc(0, 0, radius - strokeWidth / 2, 0, Math.PI * 2);
   context.stroke();
 
   if (!profile) {
-    context.fillStyle = '#c9d0c8';
+    context.fillStyle = '#ffffff';
     context.font = `700 ${Math.round(marker * 0.44)}px Outfit, sans-serif`;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
@@ -345,21 +358,47 @@ const drawPlayer = (context, slot, coordinate, field, portraits, orientation) =>
       context.fillText(String(profile.number ?? '—'), 0, 1);
     }
 
-    if (orientation === 'landscape') {
+    const showNames = displaySettings.showNames !== false;
+    if (showNames) {
       const name = labelFor(profile.name);
-      const detailsY = radius + marker * 0.18;
-      
-      context.shadowColor = 'rgba(2, 10, 5, 0.82)';
-      context.shadowBlur = marker * 0.1;
-      context.shadowOffsetY = 2;
-      context.fillStyle = 'rgba(244, 248, 239, 0.9)';
-      context.font = `700 ${Math.round(marker * 0.22)}px Outfit, sans-serif`;
+      const isPortrait = orientation === 'portrait';
+      const detailsY = radius + marker * (isPortrait ? 0.16 : 0.18);
+      const fontSize = Math.round(marker * (isPortrait ? 0.20 : 0.22));
+
+      context.save();
+      context.font = `700 ${fontSize}px Outfit, sans-serif`;
       context.textAlign = 'center';
       context.textBaseline = 'top';
+
+      // Draw subtle pill background for high contrast in broadcast videos
+      const textMetrics = context.measureText(name);
+      const textWidth = textMetrics.width;
+      const padX = marker * 0.12;
+      const padY = marker * 0.05;
+      const pillHeight = fontSize + padY * 2;
+      const pillWidth = textWidth + padX * 2;
+      const pillX = -pillWidth / 2;
+      const pillY = detailsY - padY;
+      const pillRadius = pillHeight / 2;
+
+      context.fillStyle = 'rgba(10, 18, 12, 0.88)';
+      context.beginPath();
+      if (typeof context.roundRect === 'function') {
+        context.roundRect(pillX, pillY, pillWidth, pillHeight, pillRadius);
+      } else {
+        context.rect(pillX, pillY, pillWidth, pillHeight);
+      }
+      context.fill();
+      context.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+      context.lineWidth = 1;
+      context.stroke();
+
+      context.fillStyle = '#ffffff';
       context.fillText(name, 0, detailsY);
+      context.restore();
     }
   }
-  
+
   context.restore();
 };
 
@@ -426,9 +465,9 @@ export const interpolateScene = (fromScene, toScene, progress, motion) => {
   };
 };
 
-export const renderSceneToCanvas = (scene, { portraits = new Map() } = {}) => {
+export const renderSceneToCanvas = (scene, { portraits = new Map(), displaySettings = {}, resolutionMultiplier = 1 } = {}) => {
   const orientation = scene.orientation === 'portrait' ? 'portrait' : 'landscape';
-  const geometry = getExportGeometry(orientation);
+  const geometry = getExportGeometry(orientation, resolutionMultiplier);
   const canvas = document.createElement('canvas');
   canvas.width = geometry.frame.width;
   canvas.height = geometry.frame.height;
@@ -441,7 +480,7 @@ export const renderSceneToCanvas = (scene, { portraits = new Map() } = {}) => {
     const rawCoord = getCoordinates(slot.positionId, orientation);
     const coordinate = (slot.customX != null && slot.customY != null)
       ? { ...rawCoord, x: slot.customX, y: slot.customY } : rawCoord;
-    drawPlayer(context, slot, coordinate, geometry.field, portraits, orientation);
+    drawPlayer(context, slot, coordinate, geometry.field, portraits, orientation, displaySettings);
   });
 
   return canvas;

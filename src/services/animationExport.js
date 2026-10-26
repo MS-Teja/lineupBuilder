@@ -45,7 +45,7 @@ const getFramePlan = (frames, requestedFps, maximumFrames) => {
   };
 };
 
-async function* timelineFrames({ frames, motion, onProgress, maxWidth, fps, maximumFrames }) {
+async function* timelineFrames({ frames, motion, onProgress, maxWidth, fps, maximumFrames, displaySettings }) {
   if (!frames.length) throw new Error('Add at least one keyframe before exporting.');
 
   const plan = getFramePlan(frames, fps, maximumFrames);
@@ -60,7 +60,7 @@ async function* timelineFrames({ frames, motion, onProgress, maxWidth, fps, maxi
       const scene = nextFrame
         ? interpolateScene(frame.scene, nextFrame.scene, step / plan.steps[frameIndex], motion)
         : frame.scene;
-      const rendered = scaleCanvas(renderSceneToCanvas(scene, { portraits }), maxWidth);
+      const rendered = scaleCanvas(renderSceneToCanvas(scene, { portraits, displaySettings }), maxWidth);
       captured += 1;
       onProgress?.({ captured, total: plan.totalFrames, keyframe: frame });
       yield { canvas: rendered, delay: plan.frameDelay };
@@ -82,16 +82,17 @@ const getVideoFormat = () => {
   return candidates.find(({ mimeType }) => MediaRecorder.isTypeSupported(mimeType)) ?? null;
 };
 
-export const exportStill = async ({ scene, filename }) => {
+export const exportStill = async ({ scene, filename, displaySettings }) => {
   const portraits = await prepareSceneAssets([scene]);
-  const canvas = renderSceneToCanvas(scene, { portraits });
+  // Render at 2x super-sampled resolution (3840×2160 for landscape 4K, 2160×3840 for portrait) for razor-sharp still graphics
+  const canvas = renderSceneToCanvas(scene, { portraits, displaySettings, resolutionMultiplier: 2 });
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
 
   if (!blob) throw new Error('Could not render the still image.');
   download(blob, filename);
 };
 
-export const exportGif = async ({ frames, motion, onProgress, filename }) => {
+export const exportGif = async ({ frames, motion, onProgress, filename, displaySettings }) => {
   const gif = GIFEncoder();
   let didWriteFrame = false;
 
@@ -102,10 +103,11 @@ export const exportGif = async ({ frames, motion, onProgress, filename }) => {
     maxWidth: 1280,
     fps: 12,
     maximumFrames: 120,
+    displaySettings,
   })) {
     const context = canvas.getContext('2d', { willReadFrequently: true });
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-    const palette = quantize(imageData.data, 192);
+    const palette = quantize(imageData.data, 256);
     const indexed = applyPalette(imageData.data, palette);
     gif.writeFrame(indexed, canvas.width, canvas.height, {
       palette,
@@ -120,7 +122,7 @@ export const exportGif = async ({ frames, motion, onProgress, filename }) => {
   download(new Blob([gif.bytes()], { type: 'image/gif' }), filename);
 };
 
-export const exportVideo = async ({ frames, motion, onProgress, filenameBase }) => {
+export const exportVideo = async ({ frames, motion, onProgress, filenameBase, displaySettings }) => {
   const format = getVideoFormat();
   if (format === null || typeof HTMLCanvasElement.prototype.captureStream !== 'function') {
     throw new Error('Video export is not supported by this browser. Try GIF export instead.');
@@ -140,16 +142,19 @@ export const exportVideo = async ({ frames, motion, onProgress, filenameBase }) 
       maxWidth: 1920,
       fps: 30,
       maximumFrames: 360,
+      displaySettings,
     })) {
       if (!recordingCanvas) {
         recordingCanvas = document.createElement('canvas');
         recordingCanvas.width = canvas.width;
         recordingCanvas.height = canvas.height;
         context = recordingCanvas.getContext('2d');
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
         stream = recordingCanvas.captureStream(30);
         recorder = new MediaRecorder(stream, {
           mimeType: format.mimeType,
-          videoBitsPerSecond: 12_000_000,
+          videoBitsPerSecond: 25_000_000,
         });
         recorder.ondataavailable = (event) => {
           if (event.data.size) chunks.push(event.data);

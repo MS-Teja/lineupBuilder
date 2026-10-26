@@ -1,11 +1,13 @@
 import {
   ChevronDown,
   ChevronUp,
+  Crosshair,
   FileImage,
   FileVideo,
   Film,
   Play,
   Plus,
+  RotateCcw,
   Trash2,
 } from 'lucide-react';
 
@@ -48,12 +50,16 @@ export default function MotionTimeline({
   isExpanded,
   isPlaying,
   exportState,
+  positionMode,
+  hasCustomPositions,
   onToggle,
   onSelectKeyframe,
   onAddKeyframe,
   onRemoveKeyframe,
   onUpdateKeyframe,
   onMotionChange,
+  onPositionModeChange,
+  onResetPositions,
   onPlay,
   onExportVideo,
   onExportGif,
@@ -166,6 +172,38 @@ export default function MotionTimeline({
                   onChange={(event) => onMotionChange({ formationDuration: Number(event.target.value) })}
                 />
               </label>
+            </div>
+
+            <div className="position-mode-section">
+              <div className="position-mode-header">
+                <Crosshair size={14} />
+                <div>
+                  <strong>Position mode</strong>
+                  <small>Drag players on the pitch to set positions per keyframe. Transitions are auto-interpolated.</small>
+                </div>
+              </div>
+              <div className="position-mode-actions">
+                <button
+                  type="button"
+                  className={`position-mode-toggle ${positionMode ? 'is-active' : ''}`}
+                  onClick={() => onPositionModeChange(!positionMode)}
+                  aria-pressed={positionMode}
+                >
+                  <Crosshair size={13} />
+                  {positionMode ? 'Editing positions' : 'Enable'}
+                </button>
+                {hasCustomPositions && onResetPositions && (
+                  <button
+                    type="button"
+                    className="position-reset-btn"
+                    onClick={onResetPositions}
+                    title="Reset all player positions in this cue to standard formation"
+                  >
+                    <RotateCcw size={12} />
+                    Reset to formation
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

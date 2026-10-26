@@ -1,4 +1,4 @@
-import { Camera, Check, Eye, EyeOff, Link as LinkIcon, LoaderCircle, PencilLine, Search, Trash2, Upload, X } from 'lucide-react';
+import { Camera, Check, Eye, EyeOff, Link as LinkIcon, LoaderCircle, PencilLine, RotateCcw, Search, Trash2, Upload, X, ChevronsUpDown } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { processImageFile, processImageUrl } from '../services/playerDirectory';
 import { roleMap } from '../utils/formations';
@@ -15,6 +15,7 @@ const initialsFor = (name = '') =>
 function InspectorPortrait({ player }) {
   const [hasImageError, setHasImageError] = useState(false);
   const [triedFallback, setTriedFallback] = useState(false);
+  const cropY = player?.photoCropY ?? 0;
 
   if (player?.photo && !hasImageError) {
     const isData = player.photo.startsWith('data:') || player.photo.startsWith('blob:');
@@ -26,6 +27,7 @@ function InspectorPortrait({ player }) {
       <img
         src={src}
         alt=""
+        style={{ objectPosition: `50% ${cropY}%` }}
         onError={() => {
           if (!triedFallback && !isData) {
             setTriedFallback(true);
@@ -40,7 +42,7 @@ function InspectorPortrait({ player }) {
   return <span>{initialsFor(player?.name)}</span>;
 }
 
-export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlayer, onUpdatePlayer, onOpenDirectory, onClose }) {
+export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlayer, onUpdatePlayer, onResetPosition, onOpenDirectory, onClose }) {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(() => ({
     name: slot.profile?.name ?? '',
@@ -49,6 +51,7 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
     country: slot.profile?.country ?? '',
     position: slot.profile?.position ?? '',
     photo: slot.profile?.photo ?? null,
+    photoCropY: slot.profile?.photoCropY ?? 0,
   }));
   const [urlDraft, setUrlDraft] = useState('');
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
@@ -132,6 +135,7 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
       ...player,
       ...draft,
       photo: photoToSave,
+      photoCropY: draft.photoCropY,
       number: draft.number === '' || draft.number === null ? null : Number(draft.number),
     });
     setIsEditing(false);
@@ -210,6 +214,29 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
             <strong className="inspector-number">{player.number ?? '—'}</strong>
           </div>
 
+          {player.photo && !isEditing && (
+            <div className="crop-focus-control">
+              <label className="crop-focus-label">
+                <ChevronsUpDown size={12} />
+                <span>Crop focus</span>
+                <strong>{player.photoCropY ?? 0}%</strong>
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={player.photoCropY ?? 0}
+                onChange={(e) => {
+                  const cropY = Number(e.target.value);
+                  onUpdatePlayer({ ...player, photoCropY: cropY });
+                }}
+                className="crop-focus-slider"
+                aria-label="Photo crop vertical position"
+              />
+            </div>
+          )}
+
           {showQuickUrl && !isEditing && (
             <div className="quick-url-banner">
               <div className="mini-url-row">
@@ -254,6 +281,21 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
               Change player
             </button>
           </div>
+
+          {slot.customX != null && slot.customY != null && onResetPosition && (
+            <div className="inspector-custom-pos-banner">
+              <span className="custom-pos-text">Custom position on pitch</span>
+              <button
+                type="button"
+                className="reset-position-action"
+                onClick={() => onResetPosition(slot.id)}
+                title={`Reset to standard ${role.label} position`}
+              >
+                <RotateCcw size={12} />
+                <span>Reset to {role.label}</span>
+              </button>
+            </div>
+          )}
 
           {isEditing && (
             <form className="player-edit-form" onSubmit={saveDraft}>
@@ -301,6 +343,25 @@ export default function PlayerInspector({ slot, onToggleVisibility, onRemovePlay
                     {isProcessingPhoto ? <LoaderCircle size={11} className="is-spinning" /> : 'Apply'}
                   </button>
                 </div>
+                {draft.photo && (
+                  <div className="crop-focus-control" style={{ marginTop: '0.45rem' }}>
+                    <label className="crop-focus-label">
+                      <ChevronsUpDown size={12} />
+                      <span>Crop focus</span>
+                      <strong>{draft.photoCropY ?? 0}%</strong>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={draft.photoCropY ?? 0}
+                      onChange={(e) => changeDraft('photoCropY', Number(e.target.value))}
+                      className="crop-focus-slider"
+                      aria-label="Photo crop vertical position"
+                    />
+                  </div>
+                )}
                 {photoError && <span className="photo-error-text">{photoError}</span>}
               </div>
 
