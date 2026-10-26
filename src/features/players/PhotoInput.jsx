@@ -2,11 +2,11 @@ import { Link, LoaderCircle, Upload, X } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import { processImageFile, processImageUrl } from '../../services/playerDirectory';
 import Avatar from '../../ui/Avatar';
-import { Button, IconButton, Slider } from '../../ui/controls';
+import { Button, IconButton } from '../../ui/controls';
 import './players.css';
 
-/** Upload a file or paste a URL for a player photo, with an optional crop-focus slider. */
-export default function PhotoInput({ player, accent, onPhotoChange, onCropChange }) {
+/** Upload a file or paste a URL for a player photo. */
+export default function PhotoInput({ player, accent, onPhotoChange, showPreview = true }) {
   const inputId = useId();
   const fileRef = useRef(null);
   const [url, setUrl] = useState('');
@@ -34,7 +34,7 @@ export default function PhotoInput({ player, accent, onPhotoChange, onCropChange
   return (
     <div className="photo-input">
       <div className="photo-input-main">
-        <Avatar player={player} size={56} accent={accent} />
+        {showPreview && <Avatar player={player} size={56} accent={accent} />}
         <div className="photo-input-actions">
           <input
             ref={fileRef}
@@ -77,18 +77,6 @@ export default function PhotoInput({ player, accent, onPhotoChange, onCropChange
       </div>
 
       {error && <p className="form-error">{error}</p>}
-
-      {player?.photo && onCropChange && (
-        <Slider
-          label="Crop focus"
-          value={player.photoCropY ?? 0}
-          min={0}
-          max={100}
-          step={1}
-          format={(value) => (value < 34 ? 'Top' : value > 66 ? 'Bottom' : 'Centre')}
-          onChange={onCropChange}
-        />
-      )}
     </div>
   );
 }

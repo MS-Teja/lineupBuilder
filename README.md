@@ -5,7 +5,8 @@ A broadcast-minded football lineup editor for YouTube creators. Build an XI on t
 ## How it works
 
 - **Work on the pitch.** Click an empty role to search for a player (or create a custom one with your own photo). Click a player for quick actions. Drag to reposition (snaps to teammates and a fine grid), or drop on a teammate to swap.
-- **One inspector.** With nothing selected it shows lineup style and motion; select a player to edit details, photo crop and role; select a scene to rename or retime it.
+- **One inspector.** With nothing selected it shows lineup style and motion (including the name-label style: Broadcast, Pill or Clean); select a player to edit details, role and the name shown on the pitch; select a scene to rename or retime it.
+- **Photo framing.** Drag the photo inside the circle to position it, scroll or use the slider to zoom (50–400%), or use Fill / Fit / Close-up. The dimmed area shows what's cropped. Pick a marker colour from the swatches or any custom colour.
 - **Scenes.** The strip at the bottom is your timeline. Every scene is a full lineup state with its own formation, positions and who's visible. `+ Scene` duplicates the current one; **Reveal** builds a whole sequence in one click (one by one, line by line, or all at once). Drag thumbnails to reorder.
 - **Edit scope.** "Pitch edits apply to" decides whether formation, role and position changes hit all scenes or only the selected one, so you can animate a 4-4-2 shifting into a 3-5-2.
 - **What you see is what you export.** The stage, thumbnails, preview playback and every export are drawn by the same canvas renderer.
@@ -25,7 +26,7 @@ A broadcast-minded football lineup editor for YouTube creators. Build an XI on t
 
 ## Export
 
-- **Video**: MP4 where the browser can record it, otherwise WebM; 1920×1080 (or 1080×1920) at 30 fps. Rendered in real time with `MediaRecorder`, so keep the tab in front; Chromium browsers work best.
+- **Video**: MP4 at 1080p, 1440p or 4K, 30 or 60 fps, at upload-grade bitrates (≈18 Mbps for 1080p60, ≈72 Mbps for 4K60). Encoded frame by frame with WebCodecs ([mediabunny](https://mediabunny.dev)), so it's faster than real time with no dropped frames. Browsers without WebCodecs fall back to real-time `MediaRecorder` capture.
 - **GIF**: 1280 px on the long side at 12 fps, encoded in-browser with `gifenc`.
 - **PNG**: the selected scene at 3840×2160 (or 2160×3840).
 

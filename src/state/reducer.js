@@ -166,6 +166,9 @@ export function projectReducer(state, action) {
       if (!state.roster[action.slotId]) return state;
       return { ...state, roster: { ...state.roster, [action.slotId]: { ...state.roster[action.slotId], ...action.patch } } };
 
+    case 'setAccent':
+      return { ...state, accents: { ...state.accents, [action.slotId]: action.accent } };
+
     case 'removePlayer':
       return { ...state, roster: { ...state.roster, [action.slotId]: null } };
 

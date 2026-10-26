@@ -46,6 +46,13 @@
   line-height: 1.35;
 }
 
+.export-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 18px;
+}
+
 .export-filename {
   margin-top: 18px;
 }

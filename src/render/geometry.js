@@ -9,12 +9,17 @@ export const FRAME_SIZES = {
 
 export const clamp = (value, minimum, maximum) => Math.min(Math.max(value, minimum), maximum);
 
+// Grass run-off kept around the touchlines so edge players and labels never
+// touch the frame, as on a broadcast camera.
+const RUN_OFF = 0.045;
+
 export function getGeometry(orientation = 'landscape') {
   const frame = FRAME_SIZES[orientation] ?? FRAME_SIZES.landscape;
   const isLandscape = orientation === 'landscape';
   const fieldRatio = isLandscape ? FIELD.length / FIELD.width : FIELD.width / FIELD.length;
-  const width = Math.min(frame.width, frame.height * fieldRatio);
-  const height = Math.min(frame.height, frame.width / fieldRatio);
+  const inset = Math.round(Math.min(frame.width, frame.height) * RUN_OFF);
+  const width = Math.min(frame.width - inset * 2, (frame.height - inset * 2) * fieldRatio);
+  const height = Math.min(frame.height - inset * 2, (frame.width - inset * 2) / fieldRatio);
 
   return {
     frame,
@@ -30,7 +35,7 @@ export function getGeometry(orientation = 'landscape') {
 }
 
 export const markerSize = (geometry, markerScale = 1) =>
-  clamp(Math.round(geometry.field.scale * 6 * markerScale), 36, 180);
+  clamp(Math.round(geometry.field.scale * 6.5 * markerScale), 36, 200);
 
 // Slot coordinates are percentages of the field rectangle.
 export const toFramePoint = (field, coord) => ({

@@ -7,14 +7,14 @@ export const SLOT_IDS = initialSlots.map((slot) => slot.id);
 
 export const makeId = (prefix) => `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-const ACCENTS = ['#c4a15b', '#d48657', '#c96f68', '#a8799b', '#7a7fad', '#548da0', '#579b81'];
+export const ACCENTS = ['#c4a15b', '#d48657', '#c96f68', '#a8799b', '#7a7fad', '#548da0', '#579b81'];
 
 export const accentFor = (name = '') => {
   const code = [...(name || 'player')].reduce((total, character) => total + character.charCodeAt(0), 0);
   return ACCENTS[code % ACCENTS.length];
 };
 
-export const DEFAULT_STYLE = { markerScale: 1, showNames: true, showGuides: false, snap: true };
+export const DEFAULT_STYLE = { markerScale: 1, showNames: true, labelStyle: 'broadcast', showGuides: false, snap: true };
 
 export const DEFAULT_MOTION = { entry: 'lift', exit: 'fade', transition: 'flow', duration: 520 };
 

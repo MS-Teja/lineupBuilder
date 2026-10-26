@@ -1,8 +1,10 @@
-import { Eye, EyeOff, Replace, RotateCcw, Search, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, Pipette, Replace, RotateCcw, Search, Trash2 } from 'lucide-react';
 import { useProject } from '../../state/context';
+import { ACCENTS, lastName } from '../../state/project';
 import { allRoleOptions, roleMap, units } from '../../utils/formations';
 import Avatar from '../../ui/Avatar';
 import { Button, Field, Group, Toggle } from '../../ui/controls';
+import PhotoFramer from '../players/PhotoFramer';
 import PhotoInput from '../players/PhotoInput';
 import usePlayerCommands from '../players/usePlayerCommands';
 import InspectorHeader from './InspectorHeader';
@@ -21,6 +23,38 @@ function RoleSelect({ slotId, positionId }) {
         ))}
       </select>
     </Field>
+  );
+}
+
+// Kit-friendly extras alongside the default accents.
+const SWATCHES = [...ACCENTS, '#e5484d', '#f2c230', '#2f9e5b', '#3b82f6', '#6cb4ee', '#f4f4f5', '#1f2125'];
+
+function MarkerColour({ slotId }) {
+  const { project, dispatch } = useProject();
+  const current = project.accents[slotId];
+  const set = (accent, coalesce) => dispatch({ type: 'setAccent', slotId, accent }, { coalesce });
+  return (
+    <div className="stack">
+      <span className="control-label">Marker colour</span>
+      <div className="swatches" role="radiogroup" aria-label="Marker colour">
+        {SWATCHES.map((colour) => (
+          <button
+            key={colour}
+            type="button"
+            role="radio"
+            aria-checked={current === colour}
+            aria-label={colour}
+            className={`swatch ${current === colour ? 'is-active' : ''}`}
+            style={{ '--swatch': colour }}
+            onClick={() => set(colour)}
+          />
+        ))}
+        <label className={`swatch swatch-custom ${SWATCHES.includes(current) ? '' : 'is-active'}`} title="Custom colour">
+          <Pipette size={12} color="#111" />
+          <input type="color" value={current ?? '#888888'} onChange={(event) => set(event.target.value, `accent-${slotId}`)} />
+        </label>
+      </div>
+    </div>
   );
 }
 
@@ -69,9 +103,14 @@ export default function PlayerInspector({ slotId }) {
       </Group>
 
       <Group title="Details">
-        <Field label="Name">
-          <input {...text('name')} />
-        </Field>
+        <div className="field-pair">
+          <Field label="Name">
+            <input {...text('name')} />
+          </Field>
+          <Field label="Name on pitch">
+            <input {...text('label')} placeholder={lastName(player.name)} />
+          </Field>
+        </div>
         <div className="field-pair">
           <Field label="Number">
             <input
@@ -96,13 +135,22 @@ export default function PlayerInspector({ slotId }) {
         </div>
       </Group>
 
-      <Group title="Photo">
+      <Group title="Photo & marker">
+        {player.photo && (
+          <PhotoFramer
+            key={player.photo}
+            player={player}
+            accent={project.accents[slotId]}
+            onFrameChange={(photoFrame) => update({ photoFrame }, 'frame')}
+          />
+        )}
         <PhotoInput
           player={player}
           accent={project.accents[slotId]}
-          onPhotoChange={(photo) => update({ photo })}
-          onCropChange={(photoCropY) => update({ photoCropY }, 'crop')}
+          onPhotoChange={(photo) => update({ photo, photoFrame: undefined, photoCropY: undefined })}
+          showPreview={!player.photo}
         />
+        <MarkerColour slotId={slotId} />
       </Group>
 
       <Group title="On the pitch" action={<span className="scope-note">{ui.scope === 'all' ? 'All scenes' : 'This scene'}</span>}>

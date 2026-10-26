@@ -219,3 +219,122 @@
   color: var(--danger);
   font-size: 12px;
 }
+
+/* ── Photo framer ─────────────────────────────────────────────────────── */
+.framer {
+  display: grid;
+  gap: 12px;
+}
+
+.framer-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 216px;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background:
+    repeating-conic-gradient(rgba(255, 255, 255, 0.025) 0 25%, transparent 0 50%) 0 0 / 16px 16px,
+    var(--sunken);
+  box-shadow: 0 0 0 1px var(--line) inset;
+  cursor: grab;
+  touch-action: none;
+}
+
+.framer-stage:active {
+  cursor: grabbing;
+}
+
+.framer-stage.is-loading {
+  cursor: progress;
+}
+
+.framer-ghost,
+.framer-circle {
+  position: absolute;
+  top: calc(50% - 84px);
+  left: calc(50% - 84px);
+}
+
+.framer-ghost {
+  opacity: 0.28;
+  filter: saturate(0.6);
+}
+
+.framer-circle {
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--avatar-accent, var(--raised-hover));
+}
+
+.framer-circle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 5px #fff inset, 0 0 0 1px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.framer-hint {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  padding: 3px 8px;
+  border-radius: 99px;
+  color: var(--muted);
+  background: rgba(11, 12, 14, 0.75);
+  font-size: 11px;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.framer-presets {
+  display: flex;
+  gap: 4px;
+}
+
+.framer-presets .btn {
+  flex: 1;
+}
+
+/* ── Marker colour swatches ───────────────────────────────────────────── */
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--swatch);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18) inset;
+  transition: transform var(--fast);
+}
+
+.swatch:hover {
+  transform: scale(1.12);
+}
+
+.swatch.is-active {
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
+}
+
+.swatch-custom {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--muted);
+  background: conic-gradient(#f87171, #fbbf24, #4ade80, #38bdf8, #a78bfa, #f87171);
+}
+
+.swatch-custom input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}

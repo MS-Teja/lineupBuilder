@@ -1,19 +1,30 @@
 import { Check, Download, FileImage, Film, FileVideo, LoaderCircle } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
-import { exportGif, exportStill, exportVideo, fileStem, videoFormat } from '../../export/exporters';
+import { VIDEO_SIZES, exportGif, exportStill, exportVideo, fileStem, videoFormat } from '../../export/exporters';
 import { buildTimeline } from '../../render/timeline';
 import { useProject } from '../../state/context';
-import { Button, Field } from '../../ui/controls';
+import { Button, Field, Segmented } from '../../ui/controls';
 import Dialog from '../../ui/Dialog';
 import './export.css';
 
 const seconds = (milliseconds) => `${(milliseconds / 1000).toFixed(1)}s`;
+
+const sizeOptions = Object.entries(VIDEO_SIZES).map(([value, { label }]) => ({ value, label }));
+const fpsOptions = [{ value: 30, label: '30 fps' }, { value: 60, label: '60 fps' }];
+
+const dimensions = (scale, landscape) => {
+  const long = Math.round((1920 * scale) / 2) * 2;
+  const short = Math.round((1080 * scale) / 2) * 2;
+  return landscape ? `${long}×${short}` : `${short}×${long}`;
+};
 
 export default function ExportDialog() {
   const { project, activeScene, setUi } = useProject();
   const video = useMemo(() => videoFormat(), []);
   const timeline = useMemo(() => buildTimeline(project), [project]);
   const [format, setFormat] = useState(video ? 'video' : 'gif');
+  const [size, setSize] = useState('1080p');
+  const [fps, setFps] = useState(60);
   const [filename, setFilename] = useState(() => fileStem(project.name));
   const [job, setJob] = useState({ status: 'idle', progress: 0, error: null });
   const isBusy = job.status === 'working';
@@ -25,7 +36,7 @@ export default function ExportDialog() {
       id: 'video',
       icon: FileVideo,
       title: video ? `${video.extension.toUpperCase()} video` : 'Video',
-      detail: video ? `${landscape ? '1920×1080' : '1080×1920'} · 30 fps · ${seconds(timeline.total)}` : 'Not supported in this browser',
+      detail: video ? `${dimensions(VIDEO_SIZES[size].scale, landscape)} · ${fps} fps · ${seconds(timeline.total)}` : 'Not supported in this browser',
       disabled: !video,
     },
     {
@@ -49,7 +60,7 @@ export default function ExportDialog() {
     try {
       if (format === 'png') await exportStill({ project, scene: activeScene, filename: `${stem}.png` });
       else if (format === 'gif') await exportGif({ project, filename: `${stem}.gif`, onProgress });
-      else await exportVideo({ project, filenameBase: stem, onProgress });
+      else await exportVideo({ project, filenameBase: stem, onProgress, size, fps });
       setJob({ status: 'done', progress: 1, error: null });
     } catch (error) {
       console.error('Export failed', error);
@@ -106,8 +117,20 @@ export default function ExportDialog() {
         </div>
       </Field>
 
-      {format === 'video' && (
-        <p className="export-note">Video renders in real time ({seconds(timeline.total)}). Keep this tab in front until it finishes.</p>
+      {format === 'video' && video && (
+        <div className="export-options">
+          <div className="stack">
+            <span className="control-label">Resolution</span>
+            <Segmented size="sm" stretch label="Resolution" options={sizeOptions} value={size} onChange={setSize} />
+          </div>
+          <div className="stack">
+            <span className="control-label">Frame rate</span>
+            <Segmented size="sm" stretch label="Frame rate" options={fpsOptions} value={fps} onChange={setFps} />
+          </div>
+        </div>
+      )}
+      {format === 'video' && video && !video.offline && (
+        <p className="export-note">This browser records video in real time ({seconds(timeline.total)}). Keep this tab in front until it finishes.</p>
       )}
       {job.status === 'error' && <p className="export-error">{job.error}</p>}
     </Dialog>

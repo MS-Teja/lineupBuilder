@@ -24,6 +24,12 @@ const transitionOptions = [
   { value: 'cut', label: 'Cut', title: 'Jump straight to the next scene' },
 ];
 
+const labelOptions = [
+  { value: 'broadcast', label: 'Broadcast', title: 'Uppercase slab with number tab' },
+  { value: 'pill', label: 'Pill', title: 'Rounded capsule' },
+  { value: 'clean', label: 'Clean', title: 'Outlined text, no box' },
+];
+
 const sizeLabel = (value) => (value < 0.85 ? 'Small' : value > 1.2 ? 'Large' : 'Medium');
 
 export default function StyleInspector() {
@@ -49,6 +55,12 @@ export default function StyleInspector() {
           onChange={(markerScale) => setStyle({ markerScale }, 'marker-scale')}
         />
         <Toggle label="Show names" checked={style.showNames} onChange={(showNames) => setStyle({ showNames })} />
+        {style.showNames && (
+          <div className="stack">
+            <span className="control-label">Name style</span>
+            <Segmented stretch size="sm" label="Name style" options={labelOptions} value={style.labelStyle} onChange={(labelStyle) => setStyle({ labelStyle })} />
+          </div>
+        )}
       </Group>
 
       <Group title="Motion">

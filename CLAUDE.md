@@ -19,7 +19,8 @@ YouTubers creating football content. The context of use is as a tool to aid in c
 ## Architecture
 
 - **One renderer.** `src/render/` draws every frame on canvas: the live stage, scene thumbnails, playback and all exports. Never add a separate DOM rendering of the pitch; the preview must equal the export. Editor-only marks (empty slots, hidden-player ghosts, guides) are drawn only when `editor: true`.
-- **Timeline.** `render/timeline.js` (`buildTimeline` / `sampleTimeline`) is shared by playback (`stage/Stage.jsx`) and exporters (`export/exporters.js`). Each scene holds for `duration`; moving between scenes takes `motion.duration`.
+- **Photos.** `render/photoFrame.js` (`photoRect`) places a photo in a marker from `profile.photoFrame` ({ zoom, x, y }); the canvas and DOM previews (`ui/FramedPhoto.jsx`) must both use it.
+- **Timeline.** `render/timeline.js` (`buildTimeline` / `sampleTimeline`) is shared by playback (`stage/Stage.jsx`) and exporters (`export/exporters.js`). Video encodes offline via WebCodecs (`mediabunny`, lazy-loaded), with `MediaRecorder` as fallback. Each scene holds for `duration`; moving between scenes takes `motion.duration`.
 - **State.** The project (`state/project.js`) is changed only through `state/reducer.js` actions dispatched via `useProject().dispatch`, which also handles undo/redo (`state/history.js`) and localStorage autosave. Ephemeral UI state (selection, popovers, playback) lives in `ui`, outside history.
 - **Scenes.** The roster is shared by all scenes; each scene stores formation, per-slot role/position and visibility. Layout edits follow `ui.scope` ("all" scenes or just "this scene"); visibility is always per scene.
 - **Styling.** Plain CSS: tokens in `styles/tokens.css`, primitives in `ui/controls.css`, one stylesheet per feature next to its component.

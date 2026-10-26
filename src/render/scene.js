@@ -90,6 +90,7 @@ export function renderScene(context, rendered, { scale = 1, portraits = new Map(
   const options = {
     markerScale: style.markerScale,
     showNames: style.showNames,
+    labelStyle: style.labelStyle,
     orientation: rendered.orientation,
     editor,
   };

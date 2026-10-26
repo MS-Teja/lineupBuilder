@@ -52,36 +52,31 @@ const requestJson = async (url, signal, headers) => {
   return response.json();
 };
 
-const imageElementToDataUrl = (img, maxSize = 400) => {
-  const canvas = document.createElement('canvas');
+// Keeps the whole photo (no square crop) so it can be framed in the circle
+// later; the long side is capped at maxSize. 720px stays sharp on a 4K
+// export's ~200px marker after zooming in.
+const imageElementToDataUrl = (img, maxSize = 720) => {
   const sourceWidth = img.naturalWidth || img.width;
   const sourceHeight = img.naturalHeight || img.height;
-  const targetDimension = Math.min(maxSize, Math.max(sourceWidth, sourceHeight));
-
-  canvas.width = targetDimension;
-  canvas.height = targetDimension;
+  const scale = Math.min(1, maxSize / Math.max(sourceWidth, sourceHeight));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+  canvas.height = Math.max(1, Math.round(sourceHeight * scale));
 
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-
-  // Crop into a centered square cover
-  const minSide = Math.min(sourceWidth, sourceHeight);
-  const startX = (sourceWidth - minSide) / 2;
-  const startY = (sourceHeight - minSide) / 2;
-
-  ctx.drawImage(img, startX, startY, minSide, minSide, 0, 0, targetDimension, targetDimension);
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   // WebP keeps cutout transparency at a fraction of PNG's size (autosave lives in
   // localStorage); browsers without WebP encoding fall back to PNG automatically.
-  return canvas.toDataURL('image/webp', 0.92);
+  return canvas.toDataURL('image/webp', 0.9);
 };
 
 /**
- * Optimizes an uploaded image file into a clean square base64 data URL.
- * Resizes down to maxSize (default 400x400) to keep memory footprint light
- * while ensuring high-definition sharpness for canvas and video export.
+ * Optimizes an uploaded image file into a base64 data URL, downscaled so the
+ * long side is at most maxSize, keeping its aspect ratio for framing.
  */
-export const processImageFile = (file, maxSize = 400) =>
+export const processImageFile = (file, maxSize = 720) =>
   new Promise((resolve, reject) => {
     if (!file || !file.type.startsWith('image/')) {
       reject(new Error('Please select a valid image file.'));
@@ -107,10 +102,10 @@ export const processImageFile = (file, maxSize = 400) =>
 
 /**
  * Loads an external image URL, resolving CORS restrictions via a reliable proxy
- * if direct access fails, and converts it into a clean square base64 data URL.
+ * if direct access fails, and converts it into a base64 data URL (aspect kept).
  * Ensures the photo renders in preview and never taints export canvases.
  */
-export const processImageUrl = async (rawUrl, maxSize = 400) => {
+export const processImageUrl = async (rawUrl, maxSize = 720) => {
   let url = (rawUrl || '').trim();
   if (!url) {
     throw new Error('Please enter an image URL.');
@@ -218,7 +213,7 @@ async function searchTheSportsDb(query, signal) {
         name: p.strPlayer,
         photo: p.strCutout || p.strThumb || null,
         club: p.strTeam?.startsWith('_') ? 'Unattached' : (p.strTeam || 'Unassigned club'),
-        country: p.strNationality || 'Unknown',
+        country: p.strNationality || '',
         position: p.strPosition || 'Player',
         number: p.strNumber && !isNaN(Number(p.strNumber)) ? Number(p.strNumber) : null,
         hasCutout: Boolean(p.strCutout),
@@ -288,8 +283,6 @@ async function searchWikipedia(query, signal) {
       if (isFooty) relevance += 6;
       if (hasThumb) relevance += 3;
 
-      // Extract neat club / descriptor
-      const clubDesc = isFooty && desc ? desc : 'Wikipedia Result';
 
       return {
         id: `wiki-${page.pageid}`,
@@ -297,9 +290,10 @@ async function searchWikipedia(query, signal) {
         providerId: page.pageid,
         name: page.title.replace(/\s*\([^)]*\)$/, '').trim(),
         photo: page.thumbnail?.source || null,
-        club: clubDesc,
-        country: isFooty ? 'Footballer' : 'Unknown',
-        position: 'Player',
+        // Wikipedia gives a description ("English footballer (born 2001)"), not a club.
+        club: '',
+        country: '',
+        position: isFooty && desc ? desc : 'Player',
         number: null,
         hasCutout: false,
         relevance,
