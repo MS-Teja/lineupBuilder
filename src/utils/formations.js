@@ -144,25 +144,7 @@ export const convertCoordinates = (x, y, fromOrientation, toOrientation) => {
   return { x, y };
 };
 
-const seed = (id, positionId, profile, accent) => ({
-  id,
-  positionId,
-  profile,
-  isRevealed: true,
-  isRemoving: false,
-  motionKey: 0,
-  accent,
-});
-
-export const emptySlot = (id, positionId, motionKey = 0) => ({
-  id,
-  positionId,
-  profile: null,
-  isRevealed: false,
-  isRemoving: false,
-  motionKey,
-  accent: 'var(--slot-accent)',
-});
+const seed = (id, positionId, profile, accent) => ({ id, positionId, profile, accent });
 
 export const initialSlots = [
   seed('slot-01', 'GK', { name: 'G. Donnarumma', number: 1, club: 'Paris Saint-Germain', country: 'Italy', position: 'Goalkeeper' }, '#c7a35c'),
@@ -185,7 +167,10 @@ export const demoDirectory = initialSlots.map((slot) => ({
   photo: null,
 }));
 
-export const roleInitials = (positionId) => positionId.replace(/[^A-Z]/g, '').slice(0, 3);
+export const units = ['Goalkeeper', 'Back line', 'Midfield', 'Front line'];
+
+// 0 = goalkeeper … 3 = front line. Drives reveal order and entrance stagger.
+export const unitIndex = (positionId) => Math.max(0, units.indexOf(roleMap[positionId]?.unit ?? 'Midfield'));
 
 // ─── Custom formation helpers ─────────────────────────────────────────────────
 

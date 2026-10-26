@@ -1,78 +1,68 @@
 # Lineup Studio
 
-A broadcast-minded football tactics workspace for YouTube creators. Build a lineup, direct its movement, and export only the tactical artboard—not the editor chrome.
+A broadcast-minded football lineup editor for YouTube creators. Build an XI on the pitch, stage a reveal, and export the artboard as video, GIF or a 4K still, without any editor chrome.
 
-## What changed
+## How it works
 
-- Director’s tactics desk: formation library, contextual player inspector, and 16:9/9:16 output frames.
-- Clean lineup language: every player is a compact circular marker with a portrait/monogram, shirt number, and short name. Empty roles stay as a grey `+` circle.
-- Keyframe timeline: capture the current lineup state, rename/retime cues, preview the sequence, and choose player-in, player-out, and formation-transition treatments.
-- Export-first workflow: render the timeline as browser-native WebM video or a shareable GIF, with a PNG still export for a single frame.
-- Real player directory: search names, clubs, or countries; results can carry a portrait, club, nationality, position, and shirt number.
-- Practical controls: add, replace, remove, edit, hide/reveal, swap roles via drag and drop, and undo add/remove/replacement actions.
-- Accessible motion: every animation respects `prefers-reduced-motion`.
+- **Work on the pitch.** Click an empty role to search for a player (or create a custom one with your own photo). Click a player for quick actions. Drag to reposition (snaps to teammates and a fine grid), or drop on a teammate to swap.
+- **One inspector.** With nothing selected it shows lineup style and motion; select a player to edit details, photo crop and role; select a scene to rename or retime it.
+- **Scenes.** The strip at the bottom is your timeline. Every scene is a full lineup state with its own formation, positions and who's visible. `+ Scene` duplicates the current one; **Reveal** builds a whole sequence in one click (one by one, line by line, or all at once). Drag thumbnails to reorder.
+- **Edit scope.** "Pitch edits apply to" decides whether formation, role and position changes hit all scenes or only the selected one, so you can animate a 4-4-2 shifting into a 3-5-2.
+- **What you see is what you export.** The stage, thumbnails, preview playback and every export are drawn by the same canvas renderer.
+- **Saved automatically** in this browser, with full undo/redo.
 
-## Animation and export
+### Shortcuts
 
-The animation rail is deliberately collapsed on load so the pitch remains the focus. Open **Animation & export** to:
+| Key | Action |
+| --- | --- |
+| Space | Play / stop |
+| ⌘Z / ⇧⌘Z (Ctrl+Z / Ctrl+Y) | Undo / redo |
+| Delete | Remove selected player |
+| H | Hide / show selected player in this scene |
+| Arrow keys (Shift ×5) | Nudge selected player |
+| Alt + ← / → | Previous / next scene |
+| Esc | Close popover, deselect |
 
-- capture up to eight lineup keyframes;
-- set each cue’s name and duration;
-- choose `Lift`, `Fade`, `Scale`, or `None` for player entrances/exits;
-- choose `Flow`, `Glide`, or `Cut` for formation changes;
-- preview the full cue; and
-- download a WebM video, GIF, or PNG.
+## Export
 
-WebM uses the browser’s `MediaRecorder` support, so Chromium-based browsers provide the best video-export experience. GIF is rendered entirely in-browser using `gifenc` and is intentionally size-limited for a practical share/download flow.
+- **Video**: MP4 where the browser can record it, otherwise WebM; 1920×1080 (or 1080×1920) at 30 fps. Rendered in real time with `MediaRecorder`, so keep the tab in front; Chromium browsers work best.
+- **GIF**: 1280 px on the long side at 12 fps, encoded in-browser with `gifenc`.
+- **PNG**: the selected scene at 3840×2160 (or 2160×3840).
 
 ## Player data
 
-The app works immediately with TheSportsDB’s public player lookup, with a local editable fallback if the network is unavailable. That makes the prototype usable on a static GitHub Pages deployment.
-
-For a production channel, configure a server-side `/api/players` proxy and set its URL in the build environment:
+Search merges TheSportsDB's free API, Wikipedia and a small local catalogue, so it works on a static GitHub Pages deployment. For a production channel, put a server-side proxy in front of a richer source (e.g. API-Football) and point the build at it:
 
 ```bash
 VITE_PLAYER_DIRECTORY_URL=https://your-domain.example/api/players
 ```
 
-The proxy should return this normalized shape:
+The proxy should return `{ "players": [{ "id", "name", "photo", "club", "country", "position", "number" }] }`. Only use portraits you have the rights to publish.
 
-```json
-{
-  "players": [
-    {
-      "id": "api-football-123",
-      "name": "Player name",
-      "photo": "https://...",
-      "club": "Club",
-      "country": "Country",
-      "position": "Forward",
-      "number": 9
-    }
-  ]
-}
+## Code map
+
 ```
-
-An API-Football proxy is the better production source: it keeps your private API key out of the Vite bundle, lets you cache requests, and provides richer current player data. The public fallback is intentionally best-effort. Use portrait and crest media only where you have the export rights; third-party image CORS restrictions can also affect PNG export.
+src/
+  state/      project model, reducer, undo/redo history, autosave, reveal presets
+  render/     canvas renderer (pitch, players, scenes) and the shared playback timeline
+  export/     PNG / GIF / video exporters
+  stage/      live canvas, drag/select hit layer, snapping, on-pitch toolbar
+  features/   topbar, inspector, players (search, photo), scenes (strip, reveal), export dialog, shortcuts
+  ui/         buttons, segmented controls, sliders, popover, dialog, avatar, toast
+  styles/     design tokens and base styles
+```
 
 ## Run locally
 
 ```bash
 npm install
 npm run dev
-```
-
-Then open the local URL Vite prints. Verify production output with:
-
-```bash
 npm run lint
 npm run build
 ```
 
 ## Deploy
 
-The project retains its GitHub Pages deploy script:
-
 ```bash
-npm run deploy
+npm run deploy   # builds and publishes dist/ to GitHub Pages
 ```

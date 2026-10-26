@@ -40,13 +40,12 @@ const searchLocalDirectory = (query) => {
   });
 };
 
-const requestJson = async (url, signal) => {
-  const response = await fetch(url, {
-    signal,
-    headers: {
-      'Api-User-Agent': 'LineupStudio/1.0 (tactical-lineup-app)',
-    },
-  });
+// Wikimedia asks for an Api-User-Agent; other hosts get a plain request, since a
+// custom header forces a CORS preflight that TheSportsDB rejects.
+const WIKI_HEADERS = { 'Api-User-Agent': 'LineupStudio/1.0 (tactical-lineup-app)' };
+
+const requestJson = async (url, signal, headers) => {
+  const response = await fetch(url, { signal, headers });
   if (!response.ok) {
     throw new Error(`Directory request failed (${response.status})`);
   }
@@ -72,7 +71,9 @@ const imageElementToDataUrl = (img, maxSize = 400) => {
   const startY = (sourceHeight - minSide) / 2;
 
   ctx.drawImage(img, startX, startY, minSide, minSide, 0, 0, targetDimension, targetDimension);
-  return canvas.toDataURL('image/png');
+  // WebP keeps cutout transparency at a fraction of PNG's size (autosave lives in
+  // localStorage); browsers without WebP encoding fall back to PNG automatically.
+  return canvas.toDataURL('image/webp', 0.92);
 };
 
 /**
@@ -204,7 +205,7 @@ export const processImageUrl = async (rawUrl, maxSize = 400) => {
  */
 async function searchTheSportsDb(query, signal) {
   try {
-    const url = `https://www.thesportsdb.com/api/v1/json/3/searchplayers.php?p=${encodeURIComponent(query)}`;
+    const url = `https://www.thesportsdb.com/api/v1/json/123/searchplayers.php?p=${encodeURIComponent(query)}`;
     const data = await requestJson(url, signal);
     const rawPlayers = Array.isArray(data.player) ? data.player : [];
 
@@ -240,8 +241,8 @@ async function searchWikipedia(query, signal) {
     const footballSearchUrl = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query + ' footballer')}&gsrlimit=6&prop=pageimages|description&piprop=thumbnail&pithumbsize=500&format=json&origin=*`;
 
     const [openSearchRes, footballRes] = await Promise.allSettled([
-      requestJson(openSearchUrl, signal),
-      requestJson(footballSearchUrl, signal),
+      requestJson(openSearchUrl, signal, WIKI_HEADERS),
+      requestJson(footballSearchUrl, signal, WIKI_HEADERS),
     ]);
 
     const titleSet = new Set();
@@ -264,7 +265,7 @@ async function searchWikipedia(query, signal) {
     if (titlesToFetch.length > 0) {
       try {
         const detailsUrl = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(titlesToFetch.slice(0, 8).join('|'))}&prop=pageimages|description&piprop=thumbnail&pithumbsize=500&format=json&origin=*`;
-        const detailsPayload = await requestJson(detailsUrl, signal);
+        const detailsPayload = await requestJson(detailsUrl, signal, WIKI_HEADERS);
         if (detailsPayload.query?.pages) {
           Object.values(detailsPayload.query.pages).forEach((page) => {
             if (page.title && !titleSet.has(page.title)) {
@@ -430,8 +431,8 @@ export const createManualPlayer = (input = {}) => {
     provider: 'manual',
     name: rawName || 'Untitled player',
     photo: data.photo || null,
-    club: (data.club || '').trim() || 'Custom club',
-    country: (data.country || '').trim() || 'Custom country',
+    club: (data.club || '').trim(),
+    country: (data.country || '').trim(),
     position: (data.position || '').trim() || 'Player',
     number: isNaN(rawNumber) ? null : rawNumber,
   };

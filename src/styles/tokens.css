@@ -1,0 +1,40 @@
+/* Broadcast graphite: neutral near-black chrome so the pitch is the only real
+   colour on screen, with a single amber accent for action and selection. */
+:root {
+  --bg: #0b0c0e;
+  --surface: #131417;
+  --raised: #1b1d21;
+  --raised-hover: #23262b;
+  --sunken: #0e0f11;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.14);
+
+  --text: #f2f3f5;
+  --muted: #9a9ea6;
+  --faint: #62666e;
+
+  --accent: #ffb020;
+  --accent-hover: #ffc14d;
+  --accent-ink: #1a1203;
+  --accent-soft: rgba(255, 176, 32, 0.14);
+  --danger: #ff6b6b;
+  --danger-soft: rgba(255, 107, 107, 0.12);
+  --success: #4ade80;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --shadow-pop: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--line-strong);
+  --shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.35);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --fast: 140ms;
+  --medium: 220ms;
+
+  --font: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --topbar-h: 56px;
+  --strip-h: 172px;
+  --inspector-w: 320px;
+}

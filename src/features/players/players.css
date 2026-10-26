@@ -1,0 +1,221 @@
+/* ── Shared popover chrome ────────────────────────────────────────────── */
+.popover-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 10px;
+}
+
+.popover-header h3 {
+  overflow: hidden;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popover-footer {
+  padding: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.role-chip {
+  flex: none;
+  padding: 3px 7px;
+  border-radius: 5px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+/* ── Search ───────────────────────────────────────────────────────────── */
+.player-search,
+.custom-player {
+  display: grid;
+  width: 340px;
+}
+
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  margin: 0 12px 8px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  background: var(--sunken);
+  box-shadow: 0 0 0 1px var(--line-strong) inset;
+}
+
+.search-field:focus-within {
+  box-shadow: 0 0 0 1px var(--accent) inset, 0 0 0 3px var(--accent-soft);
+}
+
+.search-field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.search-field input:focus {
+  outline: none;
+}
+
+.search-results {
+  display: grid;
+  align-content: start;
+  max-height: 320px;
+  min-height: 64px;
+  overflow-y: auto;
+  padding: 0 6px 6px;
+}
+
+.search-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 10px;
+}
+
+.search-suggestions span {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.search-suggestions button {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 99px;
+  color: var(--muted);
+  background: var(--raised);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.search-suggestions button:hover {
+  color: var(--text);
+  background: var(--raised-hover);
+}
+
+.search-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+
+.search-result:hover,
+.search-result:focus-visible {
+  background: var(--raised);
+}
+
+.search-result-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.search-result-copy strong,
+.search-result-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-result-copy strong {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.search-result-copy small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.search-status {
+  margin: 0;
+  padding: 12px 10px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.create-custom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.create-custom:hover {
+  color: var(--text);
+  background: var(--raised);
+}
+
+.create-custom span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Custom player form ───────────────────────────────────────────────── */
+.custom-player-body {
+  display: grid;
+  gap: 12px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 0 16px 16px;
+}
+
+/* ── Photo input ──────────────────────────────────────────────────────── */
+.photo-input {
+  display: grid;
+  gap: 10px;
+}
+
+.photo-input-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.photo-input-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.url-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--faint);
+}
+
+.url-row .input {
+  flex: 1;
+  height: 30px;
+  font-size: 12.5px;
+}
+
+.form-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 12px;
+}

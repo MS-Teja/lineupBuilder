@@ -1,0 +1,135 @@
+.export-formats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.export-format {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 4px;
+  min-height: 112px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  background: var(--sunken);
+  box-shadow: 0 0 0 1px var(--line) inset;
+  text-align: left;
+  transition: background var(--fast), box-shadow var(--fast), color var(--fast);
+}
+
+.export-format:hover:not(:disabled) {
+  background: var(--raised);
+}
+
+.export-format:disabled {
+  opacity: 0.45;
+}
+
+.export-format.is-active {
+  color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1.5px var(--accent) inset;
+}
+
+.export-format strong {
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.export-format small {
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+
+.export-filename {
+  margin-top: 18px;
+}
+
+.export-filename-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.export-filename-row span {
+  color: var(--faint);
+  font-size: 13px;
+}
+
+.export-note,
+.export-error {
+  margin: 14px 0 0;
+  font-size: 12.5px;
+}
+
+.export-note {
+  color: var(--faint);
+}
+
+.export-error {
+  color: var(--danger);
+}
+
+.export-progress {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  margin-right: auto;
+}
+
+.export-progress::before {
+  content: '';
+  position: absolute;
+  inset: 50% 44px auto 0;
+  height: 4px;
+  border-radius: 99px;
+  background: var(--raised-hover);
+  transform: translateY(-50%);
+}
+
+.export-progress span {
+  position: relative;
+  max-width: calc(100% - 44px);
+  height: 4px;
+  border-radius: 99px;
+  background: var(--accent);
+  transition: width 120ms linear;
+}
+
+.export-progress small {
+  position: absolute;
+  right: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.export-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;
+  color: var(--success);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.btn.is-busy svg {
+  animation: spin 900ms linear infinite;
+}
+
+@media (max-width: 560px) {
+  .export-formats {
+    grid-template-columns: 1fr;
+  }
+
+  .export-format {
+    min-height: 0;
+  }
+}

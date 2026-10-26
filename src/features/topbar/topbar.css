@@ -1,0 +1,205 @@
+.topbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  height: var(--topbar-h);
+  padding: 0 12px 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.topbar-left,
+.topbar-center,
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.topbar-right {
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.brand-mark {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  margin-right: 4px;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.project-name {
+  min-width: 60px;
+  max-width: 260px;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  field-sizing: content;
+  transition: background var(--fast), box-shadow var(--fast);
+}
+
+.project-name:hover {
+  background: var(--raised);
+}
+
+.project-name:focus {
+  outline: none;
+  background: var(--sunken);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+
+.save-status {
+  flex: none;
+  color: var(--faint);
+  font-size: 11.5px;
+}
+
+.save-status.is-error {
+  color: var(--danger);
+}
+
+.topbar-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 6px;
+  background: var(--line-strong);
+}
+
+.inspector-toggle {
+  display: none;
+}
+
+/* ── Formation trigger & menu ─────────────────────────────────────────── */
+.formation-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  margin-right: 6px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  box-shadow: 0 0 0 1px var(--line) inset;
+  font-size: 13px;
+  font-weight: 700;
+  transition: background var(--fast);
+}
+
+.formation-trigger:hover,
+.formation-trigger.is-open {
+  background: var(--raised-hover);
+}
+
+.formation-trigger small {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.formation-trigger svg:last-child {
+  color: var(--muted);
+}
+
+.mini-formation {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.35;
+  stroke-width: 2;
+}
+
+.mini-formation circle {
+  fill: currentColor;
+  fill-opacity: 1;
+  stroke: none;
+}
+
+.formation-menu {
+  display: grid;
+  gap: 14px;
+  width: 400px;
+  padding: 14px;
+}
+
+.formation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.formation-card {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 12px 6px 10px;
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  box-shadow: 0 0 0 1px var(--line) inset;
+  text-align: center;
+  transition: background var(--fast), color var(--fast), box-shadow var(--fast);
+}
+
+.formation-card:hover {
+  color: var(--text);
+  background: var(--raised);
+}
+
+.formation-card.is-active {
+  color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+
+.formation-card strong {
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.formation-card small {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.formation-custom {
+  display: grid;
+  gap: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.formation-custom-row {
+  display: flex;
+  gap: 8px;
+}
+
+.formation-custom-row .input {
+  flex: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.formation-custom small {
+  color: var(--faint);
+  font-size: 11.5px;
+}
+
+.formation-custom small.is-invalid {
+  color: var(--danger);
+}
+
+.formation-scope {
+  margin: 0;
+  color: var(--faint);
+  font-size: 11.5px;
+}

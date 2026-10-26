@@ -1,0 +1,162 @@
+.stage-area {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.025), transparent 70%),
+    var(--bg);
+}
+
+.stage-frame {
+  position: relative;
+}
+
+.stage-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px var(--line), 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+.stage-meta {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--faint);
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.stage-meta-scene {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.stage-meta-scene b {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.stage-meta-scope {
+  color: var(--accent);
+}
+
+/* ── Hit layer ────────────────────────────────────────────────────────── */
+.hit-layer {
+  position: absolute;
+}
+
+.hit-layer.is-dragging {
+  cursor: grabbing;
+}
+
+.hit-target {
+  position: absolute;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  touch-action: none;
+  transition: box-shadow var(--fast);
+}
+
+.hit-target.is-empty {
+  cursor: pointer;
+}
+
+.hit-target:hover {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
+}
+
+.hit-target:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6);
+}
+
+.hit-target.is-selected {
+  box-shadow: 0 0 0 3px var(--accent), 0 0 0 7px rgba(255, 176, 32, 0.25);
+}
+
+.hit-target.is-dragged {
+  cursor: grabbing;
+  box-shadow: 0 0 0 3px var(--accent);
+}
+
+.hit-target.is-swap {
+  box-shadow: 0 0 0 3px #fff, 0 0 0 8px rgba(255, 255, 255, 0.25);
+  animation: swap-pulse 900ms ease-in-out infinite;
+}
+
+@keyframes swap-pulse {
+  50% {
+    box-shadow: 0 0 0 3px #fff, 0 0 0 12px rgba(255, 255, 255, 0.12);
+  }
+}
+
+.snap-guide {
+  position: absolute;
+  pointer-events: none;
+  background: var(--accent);
+  opacity: 0.8;
+}
+
+.snap-guide.is-x {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.snap-guide.is-y {
+  right: 0;
+  left: 0;
+  height: 1px;
+}
+
+/* ── On-pitch player toolbar ──────────────────────────────────────────── */
+.player-actions {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  background: rgba(19, 20, 23, 0.94);
+  box-shadow: var(--shadow-pop);
+  transform: translate(-50%, -100%);
+  animation: actions-in var(--medium) var(--ease-out);
+}
+
+.player-actions.is-below {
+  transform: translate(-50%, 0);
+}
+
+@keyframes actions-in {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+}
+
+.player-actions .is-danger:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.player-actions-divider {
+  width: 1px;
+  height: 16px;
+  margin: 0 2px;
+  background: var(--line-strong);
+}

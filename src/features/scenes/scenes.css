@@ -1,0 +1,191 @@
+.scene-strip {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: var(--strip-h);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.strip-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 0;
+}
+
+.strip-transport,
+.strip-scope,
+.strip-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.strip-actions {
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.timecode {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.timecode span {
+  color: var(--faint);
+  font-weight: 500;
+}
+
+.strip-track {
+  position: relative;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.strip-progress {
+  position: sticky;
+  left: 0;
+  height: 2px;
+  margin: 8px 12px 0;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.strip-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.scene-list {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin: 0;
+  padding: 8px 12px 10px;
+  list-style: none;
+}
+
+.scene-item {
+  display: flex;
+  flex: none;
+  align-items: center;
+  transition: opacity var(--fast);
+}
+
+.scene-item.is-dragging {
+  opacity: 0.4;
+}
+
+.scene-item.is-drop-target .scene-card {
+  box-shadow: -3px 0 0 var(--accent);
+}
+
+.scene-link {
+  width: 14px;
+  height: 1px;
+  margin-bottom: 18px;
+  background: var(--line-strong);
+}
+
+.scene-card {
+  display: grid;
+  gap: 6px;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  text-align: left;
+  transition: background var(--fast), box-shadow var(--fast);
+}
+
+.scene-card:hover {
+  background: var(--raised);
+}
+
+.scene-card.is-active {
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1.5px var(--accent) inset;
+}
+
+.scene-thumb {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--sunken);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.scene-thumb canvas {
+  display: block;
+}
+
+.scene-card-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 112px;
+  padding: 0 2px;
+  font-size: 11.5px;
+}
+
+.scene-card-meta b {
+  color: var(--faint);
+  font-weight: 700;
+}
+
+.scene-card.is-active .scene-card-meta b {
+  color: var(--accent);
+}
+
+.scene-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scene-duration {
+  color: var(--faint);
+}
+
+/* ── Reveal menu ──────────────────────────────────────────────────────── */
+.reveal-menu {
+  display: grid;
+  gap: 2px;
+  width: 300px;
+  padding: 8px;
+}
+
+.reveal-menu p {
+  margin: 4px 8px 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.reveal-option {
+  display: grid;
+  gap: 2px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+
+.reveal-option:hover,
+.reveal-option:focus-visible {
+  background: var(--raised);
+}
+
+.reveal-option strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.reveal-option small {
+  color: var(--muted);
+  font-size: 12px;
+}

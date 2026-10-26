@@ -1,0 +1,169 @@
+/* ── Popover ──────────────────────────────────────────────────────────── */
+.popover {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  max-width: calc(100vw - 24px);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+  animation: pop-in var(--medium) var(--ease-out);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    scale: 0.97;
+  }
+}
+
+/* ── Dialog ───────────────────────────────────────────────────────────── */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(4, 5, 6, 0.66);
+  backdrop-filter: blur(4px);
+  animation: fade-in var(--medium) var(--ease-out);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.dialog {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(560px, 100%);
+  max-height: calc(100vh - 48px);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+  animation: pop-in var(--medium) var(--ease-out);
+}
+
+.dialog:focus {
+  outline: none;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 20px 0 24px;
+}
+
+.dialog-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.dialog-header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dialog-body {
+  overflow: auto;
+  padding: 20px 24px;
+}
+
+.dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--line);
+}
+
+/* ── Avatar ───────────────────────────────────────────────────────────── */
+.avatar {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  color: #121a14;
+  background: var(--avatar-accent, var(--raised-hover));
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.85) inset;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.avatar:not([style*='--avatar-accent']) {
+  color: var(--muted);
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── Toast ────────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: calc(var(--strip-h) + 16px);
+  left: 50%;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100vw - 32px);
+  padding: 6px 6px 6px 16px;
+  border-radius: var(--radius-md);
+  background: var(--raised);
+  box-shadow: var(--shadow-pop);
+  font-size: 13px;
+  font-weight: 500;
+  transform: translateX(-50%);
+  animation: toast-in var(--medium) var(--ease-out);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
+
+.toast > span {
+  margin-right: 8px;
+}
+
+.toast-action {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.toast-action:hover {
+  background: var(--accent-soft);
+}
+
+.toast-close {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+}
+
+.toast-close:hover {
+  color: var(--text);
+  background: var(--raised-hover);
+}

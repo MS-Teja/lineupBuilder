@@ -1,0 +1,76 @@
+.studio {
+  display: grid;
+  grid-template-rows: var(--topbar-h) minmax(0, 1fr) var(--strip-h);
+  height: 100svh;
+  min-height: 520px;
+}
+
+.workspace {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--inspector-w);
+  min-height: 0;
+}
+
+/* Narrow screens: the inspector becomes a sheet toggled from the top bar. */
+@media (max-width: 1023px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workspace .inspector {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    width: min(var(--inspector-w), 100%);
+    box-shadow: var(--shadow-pop);
+    transform: translateX(100%);
+    visibility: hidden;
+    transition: transform var(--medium) var(--ease-out), visibility var(--medium);
+  }
+
+  .workspace .inspector.is-open {
+    transform: none;
+    visibility: visible;
+  }
+
+  .inspector-toggle {
+    display: inline-grid;
+  }
+
+  .strip-scope .control-label,
+  .save-status {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .topbar-center {
+    grid-row: 2;
+    grid-column: 1 / -1;
+  }
+
+  .studio {
+    grid-template-rows: auto minmax(0, 1fr) var(--strip-h);
+  }
+
+  .topbar {
+    height: auto;
+    padding-block: 8px;
+    row-gap: 8px;
+  }
+
+  .strip-toolbar {
+    grid-template-columns: auto 1fr;
+  }
+
+  .strip-scope {
+    display: none;
+  }
+}
