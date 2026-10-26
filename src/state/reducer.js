@@ -155,12 +155,22 @@ export function projectReducer(state, action) {
         patchSlot(scene, action.slotId, { visible: action.visible })
       ));
 
-    case 'assignPlayer':
+    case 'assignPlayer': {
+      // Filling an empty role: the player appears from this scene onward, so a
+      // reveal built earlier still reveals them. A replacement inherits the
+      // previous player's per-scene visibility (and is shown in this scene).
+      const activeIndex = state.scenes.indexOf(activeScene(state, action));
+      const filling = !state.roster[action.slotId];
       return {
-        ...mapScenes(state, [activeScene(state, action).id], (scene) => patchSlot(scene, action.slotId, { visible: true })),
+        ...state,
+        scenes: state.scenes.map((scene, index) => {
+          if (index === activeIndex) return patchSlot(scene, action.slotId, { visible: true });
+          return filling ? patchSlot(scene, action.slotId, { visible: index > activeIndex }) : scene;
+        }),
         roster: { ...state.roster, [action.slotId]: action.profile },
         accents: { ...state.accents, [action.slotId]: action.accent },
       };
+    }
 
     case 'updatePlayer':
       if (!state.roster[action.slotId]) return state;
