@@ -1,5 +1,5 @@
 import { Check, Download, FileImage, Film, FileVideo, LoaderCircle } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { VIDEO_SIZES, exportGif, exportStill, exportVideo, fileStem, videoFormat } from '../../export/exporters';
 import { buildTimeline } from '../../render/timeline';
 import { useProject } from '../../state/context';
@@ -26,9 +26,13 @@ export default function ExportDialog() {
   const [size, setSize] = useState('1080p');
   const [fps, setFps] = useState(60);
   const [filename, setFilename] = useState(() => fileStem(project.name));
-  const [job, setJob] = useState({ status: 'idle', progress: 0, error: null });
+  const [job, setJob] = useState({ status: 'idle', progress: 0, error: null, note: null });
   const isBusy = job.status === 'working';
+  const abort = useRef(null);
   const close = useCallback(() => setUi({ isExportOpen: false }), [setUi]);
+
+  // Closing the dialog mid-export cancels the export.
+  useEffect(() => () => abort.current?.abort(), []);
 
   const landscape = project.orientation === 'landscape';
   const formats = [
@@ -56,15 +60,28 @@ export default function ExportDialog() {
   const run = async () => {
     const stem = fileStem(filename);
     const onProgress = (progress) => setJob((current) => ({ ...current, progress }));
-    setJob({ status: 'working', progress: 0, error: null });
+    const onFallback = (reason) => setJob((current) => ({
+      ...current,
+      note: `${reason === 'stalled' ? 'This browser’s fast video encoder stopped responding' : 'This browser can’t encode H.264 the fast way'}, so the video is being recorded in real time instead. Keep this tab in front until it finishes.`,
+    }));
+    const controller = new AbortController();
+    abort.current = controller;
+    const { signal } = controller;
+    setJob({ status: 'working', progress: 0, error: null, note: null });
     try {
       if (format === 'png') await exportStill({ project, scene: activeScene, filename: `${stem}.png` });
-      else if (format === 'gif') await exportGif({ project, filename: `${stem}.gif`, onProgress });
-      else await exportVideo({ project, filenameBase: stem, onProgress, size, fps });
-      setJob({ status: 'done', progress: 1, error: null });
+      else if (format === 'gif') await exportGif({ project, filename: `${stem}.gif`, onProgress, signal });
+      else await exportVideo({ project, filenameBase: stem, onProgress, onFallback, signal, size, fps });
+      setJob({ status: 'done', progress: 1, error: null, note: null });
     } catch (error) {
+      if (error.name === 'AbortError') {
+        setJob({ status: 'idle', progress: 0, error: null, note: 'Export cancelled.' });
+        return;
+      }
       console.error('Export failed', error);
-      setJob({ status: 'error', progress: 0, error: error.message || 'Export failed.' });
+      setJob({ status: 'error', progress: 0, error: error.message || 'Export failed.', note: null });
+    } finally {
+      if (abort.current === controller) abort.current = null;
     }
   };
 
@@ -77,7 +94,9 @@ export default function ExportDialog() {
         </div>
       )}
       {job.status === 'done' && <span className="export-done"><Check size={15} /> Downloaded</span>}
-      <Button variant="ghost" onClick={close} disabled={isBusy}>{job.status === 'done' ? 'Close' : 'Cancel'}</Button>
+      {isBusy
+        ? <Button variant="ghost" onClick={() => abort.current?.abort()} disabled={format === 'png'}>Cancel</Button>
+        : <Button variant="ghost" onClick={close}>{job.status === 'done' ? 'Close' : 'Cancel'}</Button>}
       <Button variant="primary" icon={isBusy ? LoaderCircle : Download} onClick={run} disabled={isBusy} className={isBusy ? 'is-busy' : ''}>
         {isBusy ? 'Rendering…' : 'Export'}
       </Button>
@@ -132,6 +151,7 @@ export default function ExportDialog() {
       {format === 'video' && video && !video.offline && (
         <p className="export-note">This browser records video in real time ({seconds(timeline.total)}). Keep this tab in front until it finishes.</p>
       )}
+      {job.note && <p className="export-note">{job.note}</p>}
       {job.status === 'error' && <p className="export-error">{job.error}</p>}
     </Dialog>
   );

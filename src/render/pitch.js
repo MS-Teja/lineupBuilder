@@ -155,7 +155,7 @@ const drawGoal = (context, field, orientation, atStart, lineWidth) => {
   context.strokeRect(box.x, box.y, box.width, box.height);
 };
 
-export function drawPitch(context, geometry, orientation, { guides = false } = {}) {
+function paintPitch(context, geometry, orientation, guides) {
   const { frame, field } = geometry;
   const isLandscape = orientation === 'landscape';
   const unit = field.scale;
@@ -231,4 +231,33 @@ export function drawPitch(context, geometry, orientation, { guides = false } = {
   });
 
   context.restore();
+}
+
+// The pitch never changes during playback or an export, but painting it
+// (grain, lighting, nets) is by far the most expensive part of a frame. Paint
+// it once per orientation, guides setting and pixel scale, then blit it.
+const LAYER_LIMIT = 6;
+const layers = new Map();
+
+const pitchLayer = (geometry, orientation, guides, scale) => {
+  const key = `${orientation}|${guides}|${scale.toFixed(4)}`;
+  let layer = layers.get(key);
+  if (layer) {
+    layers.delete(key);
+  } else {
+    layer = document.createElement('canvas');
+    layer.width = Math.round(geometry.frame.width * scale);
+    layer.height = Math.round(geometry.frame.height * scale);
+    const context = layer.getContext('2d');
+    context.setTransform(scale, 0, 0, scale, 0, 0);
+    paintPitch(context, geometry, orientation, guides);
+    if (layers.size >= LAYER_LIMIT) layers.delete(layers.keys().next().value);
+  }
+  layers.set(key, layer);
+  return layer;
+};
+
+/** Draws the pitch into a context already scaled by `scale` (logical → canvas pixels). */
+export function drawPitch(context, geometry, orientation, { guides = false, scale = 1 } = {}) {
+  context.drawImage(pitchLayer(geometry, orientation, guides, scale), 0, 0, geometry.frame.width, geometry.frame.height);
 }

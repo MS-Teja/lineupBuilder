@@ -53,7 +53,7 @@ export function renderScene(context, rendered, { scale = 1, portraits = new Map(
   context.setTransform(scale, 0, 0, scale, 0, 0);
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = 'high';
-  drawPitch(context, geometry, rendered.orientation, { guides: editor && style.showGuides });
+  drawPitch(context, geometry, rendered.orientation, { guides: editor && style.showGuides, scale });
   // Empty roles underneath, players on top.
   rendered.slots.filter((slot) => !slot.profile).forEach((slot) => drawPlayer(context, slot, geometry, portraits, options));
   rendered.slots.filter((slot) => slot.profile).forEach((slot) => drawPlayer(context, slot, geometry, portraits, options));
